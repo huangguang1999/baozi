@@ -1,0 +1,538 @@
+name: Baozi
+options:
+  bundleIdPrefix: com.kris99
+  deploymentTarget:
+    iOS: "18.0"
+    watchOS: "11.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+  fileTypes:
+    icon:
+      file: true
+
+# DeveloperID is a release-style configuration used by the Mac Catalyst
+# direct-distribution lane (notarized .dmg). It points the BaoziMac target
+# at a separate, unsandboxed entitlements file so the app can spawn a local
+# `codex app-server`. The Mac App Store lane stays on Release with sandbox.
+configs:
+  Debug: debug
+  Release: release
+  DeveloperID: release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    SWIFT_STRICT_CONCURRENCY: targeted
+    MARKETING_VERSION: "1.5.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_OBJC_BRIDGING_HEADER: Sources/Baozi/Bridge/codex_bridge_objc.h
+    OTHER_LDFLAGS: "$(inherited) -lc++ -lz -lresolv -lcodex_mobile_client"
+    HEADER_SEARCH_PATHS: "$(inherited) $(PROJECT_DIR)/GeneratedRust/Headers"
+    SWIFT_INCLUDE_PATHS: "$(inherited) $(PROJECT_DIR)/GeneratedRust/Headers"
+    "LIBRARY_SEARCH_PATHS[sdk=iphoneos*]": "$(inherited) $(PROJECT_DIR)/GeneratedRust/ios-device"
+    "LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]": "$(inherited) $(PROJECT_DIR)/GeneratedRust/ios-sim"
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    DEVELOPMENT_TEAM: DDZU3W897W
+    # Xcode 15+ explicit-module builds. First clean build is slightly
+    # slower, but module graphs are cached per-target after that, so
+    # incremental Swift compiles in the app target drop substantially.
+    SWIFT_ENABLE_EXPLICIT_MODULES: "YES"
+    CLANG_ENABLE_EXPLICIT_MODULES: "YES"
+
+packages:
+  Hairball:
+    url: https://github.com/dnakov/hairball.git
+    branch: main
+  WebRTC:
+    url: https://github.com/stasel/WebRTC.git
+    exactVersion: "147.0.0"
+  Nuke:
+    url: https://github.com/kean/Nuke.git
+    from: "12.8.0"
+targets:
+  Baozi:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    entitlements:
+      path: Sources/Baozi/Baozi.entitlements
+      properties: {}
+    attributes:
+      SystemCapabilities:
+        com.apple.BackgroundModes:
+          enabled: true
+    sources:
+      - path: Sources/Baozi
+        excludes:
+          - "**/*.h"
+          - "AppIcon.icon"
+      - path: Sources/Baozi/Bridge/UniFFICodexClient.generated.swift
+      - path: Sources/BaoziLiveActivity/CodexTurnLiveActivity.swift
+      - path: Sources/BaoziWatch/Models/WatchModels.swift
+      - path: Sources/BaoziWatch/Models/WatchSize.swift
+      - path: Sources/BaoziWatch/Models/WatchHapticDetector.swift
+      - path: Sources/BaoziWatch/Models/WatchSnapshotStore.swift
+      - path: Sources/BaoziWatch/Models/WatchDeepLinkRouter.swift
+      - path: Sources/BaoziWatchComplications/BaoziServerListPayload.swift
+      - path: Sources/BaoziWatchComplications/BaoziComplicationEntry.swift
+      - path: Sources/BaoziWatchComplications/BaoziRunningTurnPayload.swift
+    resources:
+      - path: Sources/Baozi/Resources/Fonts
+      - path: Sources/Baozi/Resources/Themes
+      - path: Sources/Baozi/Resources/TipJarProducts.storekit
+      - path: Sources/Baozi/Resources/home_cat.png
+      - path: Sources/Baozi/Resources/home_cat_entrance.png
+      - path: Sources/Baozi/Resources/cat_transmission_01.png
+      - path: Sources/Baozi/Resources/cat_transmission_02.png
+      - path: Sources/Baozi/Resources/cat_transmission_03.png
+      - path: Sources/Baozi/Resources/cat_transmission_04.png
+      - path: Sources/Baozi/Resources/cat_transmission_05.png
+      - path: Sources/Baozi/Resources/cat_transmission_06.png
+      - path: Sources/Baozi/Resources/cat_transmission_07.png
+      - path: Sources/Baozi/Resources/cat_transmission_08.png
+      - path: Sources/Baozi/Resources/cat_transmission_09.png
+      - path: Sources/Baozi/Resources/cat_transmission_10.png
+      - path: Sources/Baozi/Resources/cat_transmission_11.png
+      - path: Sources/Baozi/Resources/cat_transmission_12.png
+      - path: Sources/Baozi/Resources/cat_transmission_13.png
+      - path: Sources/Baozi/Resources/cat_transmission_14.png
+      - path: Sources/Baozi/Resources/cat_transmission_15.png
+      - path: Sources/Baozi/Resources/cat_transmission_16.png
+      - path: Sources/Baozi/Resources/cat_transmission_17.png
+      - path: Sources/Baozi/Resources/cat_transmission_18.png
+      - path: Sources/Baozi/Resources/cat_transmission_19.png
+      - path: Sources/Baozi/Resources/cat_transmission_20.png
+      - path: Sources/Baozi/Resources/cat_transmission_21.png
+      - path: Sources/Baozi/Resources/cat_transmission_22.png
+      - path: Sources/Baozi/Resources/cat_transmission_23.png
+      - path: Sources/Baozi/Resources/cat_transmission_24.png
+      - path: Sources/Baozi/Resources/cat_transmission_25.png
+      - path: Sources/Baozi/Resources/cat_transmission_26.png
+      - path: Sources/Baozi/Resources/cat_transmission_27.png
+      - path: Sources/Baozi/Resources/cat_transmission_28.png
+      - path: Sources/Baozi/Resources/cat_transmission_29.png
+      - path: Sources/Baozi/Resources/cat_transmission_30.png
+      - path: Sources/Baozi/Resources/cat_transmission_31.png
+      - path: Sources/Baozi/Resources/cat_transmission_32.png
+      - path: Sources/Baozi/Resources/cat_transmission_33.png
+      - path: Sources/Baozi/Resources/cat_transmission_34.png
+      - path: Sources/Baozi/Resources/cat_transmission_35.png
+      - path: Sources/Baozi/Resources/cat_transmission_36.png
+      - path: Sources/Baozi/Resources/cat_transmission_37.png
+      - path: Sources/Baozi/Resources/cat_transmission_38.png
+      - path: Sources/Baozi/Resources/cat_transmission_39.png
+      - path: Sources/Baozi/Resources/cat_transmission_40.png
+      - path: Sources/Baozi/Resources/cat_transmission_41.png
+      - path: Sources/Baozi/Resources/cat_transmission_42.png
+      - path: Sources/Baozi/Resources/cat_transmission_43.png
+      - path: Sources/Baozi/Resources/cat_transmission_44.png
+      - path: Sources/Baozi/Resources/cat_transmission_45.png
+      - path: Sources/Baozi/Resources/cat_transmission_46.png
+    dependencies:
+      - sdk: CarPlay.framework
+      - sdk: CoreGraphics.framework
+      - sdk: CoreText.framework
+      - sdk: CoreVideo.framework
+      - sdk: IOSurface.framework
+      - sdk: Metal.framework
+      - sdk: QuartzCore.framework
+      - sdk: Security.framework
+      - sdk: SystemConfiguration.framework
+      - sdk: Network.framework
+      - package: Hairball
+        product: HairballUI
+      - package: WebRTC
+        product: WebRTC
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kris99.baozi
+        INFOPLIST_KEY_CFBundleDisplayName: "包子"
+        INFOPLIST_FILE: Sources/Baozi/Info.plist
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/Baozi/Bridge/codex_bridge_objc.h
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_UIBackgroundModes: "audio fetch remote-notification picture-in-picture"
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: "$(APP_CODE_SIGN_STYLE)"
+          APP_CODE_SIGN_STYLE: Automatic
+          PROVISIONING_PROFILE_SPECIFIER: "$(APP_PROVISIONING_PROFILE_SPECIFIER)"
+          APP_PROVISIONING_PROFILE_SPECIFIER: ""
+          OTHER_LDFLAGS: "$(inherited) -lc++ -lz -lresolv -lcodex_mobile_client -lghostty"
+        Release:
+          CODE_SIGN_STYLE: "$(APP_CODE_SIGN_STYLE)"
+          APP_CODE_SIGN_STYLE: Automatic
+          CODE_SIGN_IDENTITY: "$(APP_CODE_SIGN_IDENTITY)"
+          APP_CODE_SIGN_IDENTITY: ""
+          PROVISIONING_PROFILE_SPECIFIER: "$(APP_PROVISIONING_PROFILE_SPECIFIER)"
+          APP_PROVISIONING_PROFILE_SPECIFIER: ""
+          OTHER_LDFLAGS: "$(inherited) -lc++ -lz -lresolv -lcodex_mobile_client -lghostty"
+  BaoziMac:
+    type: application
+    platform: auto
+    supportedDestinations:
+      - macCatalyst
+    entitlements:
+      path: Sources/Baozi/Baozi-Catalyst.entitlements
+      properties:
+        aps-environment: production
+        # iCloud KVS sync (Feature C). Re-add when the iCloud container
+        # `iCloud.com.kris99.baozi` exists in the Apple Developer Portal
+        # AND the Mac App Store profile is regenerated to include the iCloud
+        # capability. Direct-dist (DeveloperID entitlements) keeps the key
+        # because Developer ID apps validate iCloud at runtime, not via profile.
+        # com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)iCloud.com.kris99.baozi
+        com.apple.security.application-groups:
+          - group.com.kris99.baozi
+        com.apple.security.app-sandbox: true
+        com.apple.security.device.bluetooth: true
+        com.apple.security.files.user-selected.read-write: true
+        com.apple.security.network.client: true
+        com.apple.security.network.server: true
+    sources:
+      - path: Sources/Baozi
+        excludes:
+          - CarPlay/**
+          - Info.plist
+          - Baozi.entitlements
+          - Baozi-Catalyst.entitlements
+          - Baozi-Catalyst-DeveloperID.entitlements
+          - Models/AppLifecycleController.swift
+          - Models/AppRuntimeController.swift
+          - Models/CodexTurnAttributes.swift
+          - Models/CodexVoiceCallAttributes.swift
+          - Models/OrientationResponder.swift
+          - Models/RealtimeWebRtcSession.swift
+          - Models/StableSafeAreaInsets.swift
+          - Models/TurnLiveActivityController.swift
+          - Models/VoiceRuntimeController.swift
+          - Models/VoiceSessionControl.swift
+          - Models/VoiceSessionModels.swift
+          - Models/WatchCompanionBridge.swift
+          - Models/WatchProjection.swift
+          - Views/HomeVoiceOrbButton.swift
+          - Views/InlineVoiceButton.swift
+          - Views/InlineVoiceStatusStrip.swift
+          - Views/LiveActivityPreview.swift
+          - Views/LockScreenCardView.swift
+          - Views/RealtimeVoiceScreen.swift
+          - Views/VoiceCallView.swift
+          - "**/*.h"
+      - path: Sources/Baozi/Bridge/UniFFICodexClient.generated.swift
+    resources:
+      - path: Sources/Baozi/Resources/Fonts
+      - path: Sources/Baozi/Resources/Themes
+      - path: Sources/Baozi/Resources/TipJarProducts.storekit
+      - path: Sources/Baozi/Resources/home_cat.png
+      - path: Sources/Baozi/Resources/home_cat_entrance.png
+      - path: Sources/Baozi/Resources/cat_transmission_01.png
+      - path: Sources/Baozi/Resources/cat_transmission_02.png
+      - path: Sources/Baozi/Resources/cat_transmission_03.png
+      - path: Sources/Baozi/Resources/cat_transmission_04.png
+      - path: Sources/Baozi/Resources/cat_transmission_05.png
+      - path: Sources/Baozi/Resources/cat_transmission_06.png
+      - path: Sources/Baozi/Resources/cat_transmission_07.png
+      - path: Sources/Baozi/Resources/cat_transmission_08.png
+      - path: Sources/Baozi/Resources/cat_transmission_09.png
+      - path: Sources/Baozi/Resources/cat_transmission_10.png
+      - path: Sources/Baozi/Resources/cat_transmission_11.png
+      - path: Sources/Baozi/Resources/cat_transmission_12.png
+      - path: Sources/Baozi/Resources/cat_transmission_13.png
+      - path: Sources/Baozi/Resources/cat_transmission_14.png
+      - path: Sources/Baozi/Resources/cat_transmission_15.png
+      - path: Sources/Baozi/Resources/cat_transmission_16.png
+      - path: Sources/Baozi/Resources/cat_transmission_17.png
+      - path: Sources/Baozi/Resources/cat_transmission_18.png
+      - path: Sources/Baozi/Resources/cat_transmission_19.png
+      - path: Sources/Baozi/Resources/cat_transmission_20.png
+      - path: Sources/Baozi/Resources/cat_transmission_21.png
+      - path: Sources/Baozi/Resources/cat_transmission_22.png
+      - path: Sources/Baozi/Resources/cat_transmission_23.png
+      - path: Sources/Baozi/Resources/cat_transmission_24.png
+      - path: Sources/Baozi/Resources/cat_transmission_25.png
+      - path: Sources/Baozi/Resources/cat_transmission_26.png
+      - path: Sources/Baozi/Resources/cat_transmission_27.png
+      - path: Sources/Baozi/Resources/cat_transmission_28.png
+      - path: Sources/Baozi/Resources/cat_transmission_29.png
+      - path: Sources/Baozi/Resources/cat_transmission_30.png
+      - path: Sources/Baozi/Resources/cat_transmission_31.png
+      - path: Sources/Baozi/Resources/cat_transmission_32.png
+      - path: Sources/Baozi/Resources/cat_transmission_33.png
+      - path: Sources/Baozi/Resources/cat_transmission_34.png
+      - path: Sources/Baozi/Resources/cat_transmission_35.png
+      - path: Sources/Baozi/Resources/cat_transmission_36.png
+      - path: Sources/Baozi/Resources/cat_transmission_37.png
+      - path: Sources/Baozi/Resources/cat_transmission_38.png
+      - path: Sources/Baozi/Resources/cat_transmission_39.png
+      - path: Sources/Baozi/Resources/cat_transmission_40.png
+      - path: Sources/Baozi/Resources/cat_transmission_41.png
+      - path: Sources/Baozi/Resources/cat_transmission_42.png
+      - path: Sources/Baozi/Resources/cat_transmission_43.png
+      - path: Sources/Baozi/Resources/cat_transmission_44.png
+      - path: Sources/Baozi/Resources/cat_transmission_45.png
+      - path: Sources/Baozi/Resources/cat_transmission_46.png
+    dependencies:
+      - sdk: Security.framework
+      - sdk: SystemConfiguration.framework
+      - sdk: Network.framework
+      - package: Hairball
+        product: HairballUI
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
+    settings:
+      base:
+        PRODUCT_NAME: Baozi
+        PRODUCT_BUNDLE_IDENTIFIER: com.kris99.baozi
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        INFOPLIST_FILE: Sources/Baozi/Info-Catalyst.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIconMac
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/Baozi/Bridge/codex_bridge_objc.h
+        SUPPORTS_MACCATALYST: YES
+        SUPPORTS_MACCATALYST_OPTIMIZED_FOR_MAC: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        "LIBRARY_SEARCH_PATHS[sdk=macosx*]": "$(inherited) $(PROJECT_DIR)/GeneratedRust/ios-macabi"
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: "$(APP_CODE_SIGN_STYLE)"
+          APP_CODE_SIGN_STYLE: Automatic
+          PROVISIONING_PROFILE_SPECIFIER: "$(APP_PROVISIONING_PROFILE_SPECIFIER)"
+          APP_PROVISIONING_PROFILE_SPECIFIER: ""
+          OTHER_LDFLAGS: "$(inherited) -lc++ -lz -lresolv -lcodex_mobile_client -lghostty"
+        Release:
+          CODE_SIGN_STYLE: "$(APP_CODE_SIGN_STYLE)"
+          APP_CODE_SIGN_STYLE: Automatic
+          CODE_SIGN_IDENTITY: "$(APP_CODE_SIGN_IDENTITY)"
+          APP_CODE_SIGN_IDENTITY: ""
+          PROVISIONING_PROFILE_SPECIFIER: "$(APP_PROVISIONING_PROFILE_SPECIFIER)"
+          APP_PROVISIONING_PROFILE_SPECIFIER: ""
+          OTHER_LDFLAGS: "$(inherited) -lc++ -lz -lresolv -lcodex_mobile_client -lghostty"
+        # Direct-distribution (notarized .dmg) lane. Re-points
+        # CODE_SIGN_ENTITLEMENTS at the unsandboxed entitlements file so the
+        # Mac build can spawn a local `codex app-server`. Same automatic
+        # signing flow as Release; the actual cert is selected via the
+        # APP_CODE_SIGN_IDENTITY override the script passes through.
+        DeveloperID:
+          CODE_SIGN_STYLE: "$(APP_CODE_SIGN_STYLE)"
+          APP_CODE_SIGN_STYLE: Automatic
+          CODE_SIGN_IDENTITY: "$(APP_CODE_SIGN_IDENTITY)"
+          APP_CODE_SIGN_IDENTITY: ""
+          PROVISIONING_PROFILE_SPECIFIER: "$(APP_PROVISIONING_PROFILE_SPECIFIER)"
+          APP_PROVISIONING_PROFILE_SPECIFIER: ""
+          OTHER_LDFLAGS: "$(inherited) -lc++ -lz -lresolv -lcodex_mobile_client -lghostty"
+          ENABLE_HARDENED_RUNTIME: YES
+          CODE_SIGN_ENTITLEMENTS: Sources/Baozi/Baozi-Catalyst-DeveloperID.entitlements
+  BaoziLiveActivity:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "18.0"
+    entitlements:
+      path: Sources/BaoziLiveActivity/BaoziLiveActivity.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.kris99.baozi
+    sources:
+      - path: Sources/BaoziLiveActivity
+      - path: Sources/Baozi/Models/CodexTurnAttributes.swift
+      - path: Sources/Baozi/Models/CodexVoiceCallAttributes.swift
+      - path: Sources/Baozi/Models/BaoziPalette.swift
+      - path: Sources/Baozi/Models/VoiceSessionControl.swift
+      - path: Sources/Baozi/Views/LockScreenCardView.swift
+    resources:
+      - path: Sources/BaoziLiveActivity/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kris99.baozi.liveactivity
+        INFOPLIST_FILE: Sources/BaoziLiveActivity/Info.plist
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: "$(LIVE_ACTIVITY_CODE_SIGN_STYLE)"
+          LIVE_ACTIVITY_CODE_SIGN_STYLE: Automatic
+          PROVISIONING_PROFILE_SPECIFIER: "$(LIVE_ACTIVITY_PROVISIONING_PROFILE_SPECIFIER)"
+          LIVE_ACTIVITY_PROVISIONING_PROFILE_SPECIFIER: ""
+          ENABLE_DEBUG_DYLIB: NO
+        Release:
+          CODE_SIGN_STYLE: "$(LIVE_ACTIVITY_CODE_SIGN_STYLE)"
+          LIVE_ACTIVITY_CODE_SIGN_STYLE: Automatic
+          CODE_SIGN_IDENTITY: "$(LIVE_ACTIVITY_CODE_SIGN_IDENTITY)"
+          LIVE_ACTIVITY_CODE_SIGN_IDENTITY: ""
+          PROVISIONING_PROFILE_SPECIFIER: "$(LIVE_ACTIVITY_PROVISIONING_PROFILE_SPECIFIER)"
+          LIVE_ACTIVITY_PROVISIONING_PROFILE_SPECIFIER: ""
+  BaoziWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "11.0"
+    entitlements:
+      path: Sources/BaoziWatch/BaoziWatch.entitlements
+      properties:
+        aps-environment: production
+        com.apple.security.application-groups:
+          - group.com.kris99.baozi
+    sources:
+      - path: Sources/BaoziWatch
+        excludes:
+          - "Assets.xcassets"
+      - path: Sources/Baozi/AppIcon.icon
+    resources:
+      - path: Sources/Baozi/Resources/Fonts
+      - path: Sources/BaoziWatch/Assets.xcassets
+    dependencies:
+      - target: BaoziWatchComplications
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kris99.baozi.watchkitapp
+        INFOPLIST_FILE: Sources/BaoziWatch/Info.plist
+        TARGETED_DEVICE_FAMILY: "4"
+        WATCHOS_DEPLOYMENT_TARGET: "11.0"
+        GENERATE_INFOPLIST_FILE: NO
+        SDKROOT: watchos
+        SUPPORTS_MACCATALYST: NO
+        OTHER_LDFLAGS: ""
+        SWIFT_OBJC_BRIDGING_HEADER: ""
+        HEADER_SEARCH_PATHS: "$(inherited)"
+        SWIFT_INCLUDE_PATHS: "$(inherited)"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: "$(WATCH_CODE_SIGN_STYLE)"
+          WATCH_CODE_SIGN_STYLE: Automatic
+          PROVISIONING_PROFILE_SPECIFIER: "$(WATCH_PROVISIONING_PROFILE_SPECIFIER)"
+          WATCH_PROVISIONING_PROFILE_SPECIFIER: ""
+        Release:
+          CODE_SIGN_STYLE: "$(WATCH_CODE_SIGN_STYLE)"
+          WATCH_CODE_SIGN_STYLE: Automatic
+          CODE_SIGN_IDENTITY: "$(WATCH_CODE_SIGN_IDENTITY)"
+          WATCH_CODE_SIGN_IDENTITY: ""
+          PROVISIONING_PROFILE_SPECIFIER: "$(WATCH_PROVISIONING_PROFILE_SPECIFIER)"
+          WATCH_PROVISIONING_PROFILE_SPECIFIER: ""
+
+  BaoziWatchComplications:
+    type: app-extension
+    platform: watchOS
+    deploymentTarget: "11.0"
+    entitlements:
+      path: Sources/BaoziWatchComplications/BaoziWatchComplications.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.kris99.baozi
+    sources:
+      - path: Sources/BaoziWatchComplications
+        excludes:
+          - "Assets.xcassets"
+    resources:
+      - path: Sources/BaoziWatchComplications/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kris99.baozi.watchkitapp.complications
+        INFOPLIST_FILE: Sources/BaoziWatchComplications/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "4"
+        WATCHOS_DEPLOYMENT_TARGET: "11.0"
+        SDKROOT: watchos
+        OTHER_LDFLAGS: ""
+        SWIFT_OBJC_BRIDGING_HEADER: ""
+        HEADER_SEARCH_PATHS: "$(inherited)"
+        SWIFT_INCLUDE_PATHS: "$(inherited)"
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: "$(WATCH_COMP_CODE_SIGN_STYLE)"
+          WATCH_COMP_CODE_SIGN_STYLE: Automatic
+          PROVISIONING_PROFILE_SPECIFIER: "$(WATCH_COMP_PROVISIONING_PROFILE_SPECIFIER)"
+          WATCH_COMP_PROVISIONING_PROFILE_SPECIFIER: ""
+        Release:
+          CODE_SIGN_STYLE: "$(WATCH_COMP_CODE_SIGN_STYLE)"
+          WATCH_COMP_CODE_SIGN_STYLE: Automatic
+          CODE_SIGN_IDENTITY: "$(WATCH_COMP_CODE_SIGN_IDENTITY)"
+          WATCH_COMP_CODE_SIGN_IDENTITY: ""
+          PROVISIONING_PROFILE_SPECIFIER: "$(WATCH_COMP_PROVISIONING_PROFILE_SPECIFIER)"
+          WATCH_COMP_PROVISIONING_PROFILE_SPECIFIER: ""
+
+  BaoziTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/BaoziTests
+    dependencies:
+      - target: Baozi
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+        CODE_SIGNING_ALLOWED: false
+        CODE_SIGNING_REQUIRED: false
+  BaoziUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Tests/BaoziUITests
+      - path: SnapshotHelper.swift
+    dependencies:
+      - target: Baozi
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+        TEST_TARGET_NAME: Baozi
+        CODE_SIGNING_ALLOWED: false
+        CODE_SIGNING_REQUIRED: false
+
+schemes:
+  BaoziWatch:
+    build:
+      targets:
+        BaoziWatch: all
+        BaoziWatchComplications: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+    management:
+      isShown: true
+      orderHint: 2
+  Baozi:
+    build:
+      targets:
+        Baozi: all
+    run:
+      config: Debug
+      customLLDBInit: $(SRCROOT)/.lldbinit
+    test:
+      config: Debug
+      targets:
+        - BaoziTests
+        - BaoziUITests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+    management:
+      isShown: true
+      orderHint: 1
+  BaoziMac:
+    build:
+      targets:
+        BaoziMac: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    # Default archive uses Release (sandboxed) for the App Store lane.
+    # The direct-distribution script overrides via `-configuration DeveloperID`.
+    archive:
+      config: Release
+    management:
+      isShown: true
+      orderHint: 3

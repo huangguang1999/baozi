@@ -1,0 +1,88 @@
+[package]
+name = "codex-mobile-client"
+version = "0.1.0"
+edition = "2024"
+description = "Shared mobile client library for Codex iOS and Android apps"
+license-file = "../../../LICENSE"
+
+[lib]
+name = "codex_mobile_client"
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+uniffi = { version = "0.31.0", features = ["tokio"] }
+iroh = "0.98.1"
+codex-app-server = { workspace = true }
+codex-app-server-client = { workspace = true }
+codex-app-server-protocol = { workspace = true }
+codex-slingshot = { path = "../codex-slingshot" }
+codex-protocol = { workspace = true }
+codex-core = { workspace = true }
+codex-exec-server = { workspace = true }
+codex-login = { workspace = true }
+codex-shell-command = { workspace = true }
+codex-config = { workspace = true }
+codex-cloud-requirements = { workspace = true }
+codex-utils-absolute-path = { workspace = true }
+codex-git-utils = { workspace = true }
+codex-feedback = { workspace = true }
+codex-arg0 = { workspace = true }
+alleycat-bridge-core = { workspace = true }
+alleycat-pi-bridge = { workspace = true }
+alleycat-claude-bridge = { workspace = true }
+alleycat-opencode-bridge = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio-tungstenite = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+lru = { workspace = true }
+chrono = { workspace = true }
+regex = { workspace = true }
+base64 = { workspace = true }
+russh = { workspace = true }
+russh-keys = { workspace = true }
+futures = { workspace = true }
+url = { workspace = true }
+uuid = { workspace = true }
+reqwest = { workspace = true }
+tracing-subscriber = { workspace = true }
+shlex = { workspace = true }
+sha1 = "0.10"
+hex = "0.4"
+semver = { version = "1", default-features = false }
+linkify = "0.10"
+unicode-segmentation = "1"
+
+[features]
+rpc-trace = []
+# [litter-fork] Opt-in iSH (on-device Alpine Linux emulator) backend. OFF by
+# default so the App Store fork ships without an embedded code interpreter
+# (App Store guideline 2.5.2). When off, ish-embed-host is not linked and the
+# iSH runtime/exec/terminal code is cfg'd out; ish_bootstrap/ish_run/localIsh
+# return Unsupported, FFI surface unchanged.
+ish = ["dep:ish-embed-host"]
+
+[dev-dependencies]
+tempfile = "3"
+
+[build-dependencies]
+uniffi = { version = "0.31.0", features = ["build"] }
+
+[target.'cfg(all(target_os = "ios", not(target_abi = "macabi")))'.dependencies]
+codex-apply-patch = { workspace = true }
+# [litter-fork] iSH backend, now optional + pinned. Only linked when the `ish`
+# feature is enabled (off by default for the App Store fork). Pinned to an
+# explicit commit for reproducible builds / GPLv3 source-correspondence.
+ish-embed-host = { git = "https://github.com/dnakov/litter-ish.git", rev = "4f783cd957b83de3019d6a843408d5bb3ff902c7", optional = true }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+ndk-context = "0.1"
+openssl-sys = { version = "0.9", features = ["vendored"] }
+portable-pty = "0.9"
+flate2 = "1"
+tar = "0.4"
+rusqlite = { version = "0.32.1", features = ["bundled"] }

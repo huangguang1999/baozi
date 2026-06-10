@@ -1,0 +1,37 @@
+[workspace]
+
+[package]
+# npm package name (published as `baozicli`); the installed command is `baozi`.
+name = "baozicli"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+authors = ["The Alleycat Authors", "Baozi"]
+repository = "https://github.com/huangguang1999/baozi"
+homepage = "https://github.com/huangguang1999/baozi"
+description = "包子 Mac 端：Iroh P2P 守护进程，把本地编码 agent（Codex/Pi/OpenCode/Claude）多路复用给已配对的包子 App。"
+readme = "README.md"
+
+[package.metadata.wix]
+upgrade-guid = "DA2F3E1D-ED35-4E0F-A090-DBAF066F1634"
+path-guid = "45FCD157-114F-40BA-8F2D-21BA43E7F15F"
+license = false
+eula = false
+
+[[bin]]
+name = "baozi"
+path = "src/main.rs"
+
+[dependencies]
+# [litter-fork] Pinned to an explicit alleycat commit for reproducible builds /
+# GPLv3 source-correspondence (was: branch = "main"). Build with
+# LITTER_SKIP_ALLEYCAT_UPDATE=1 so update-alleycat-main.sh does not float it.
+alleycat = { git = "https://github.com/huangguang1999/alleycat.git", rev = "3c6dfe2c6b060864d8cb0fcae58f73a6ed1ea10f" }
+anyhow = "1"
+
+# cargo-dist builds with `cargo build --profile dist`. Mirrors the
+# upstream alleycat workspace's profile so binaries are LTO-thinned in
+# release artifacts.
+[profile.dist]
+inherits = "release"
+lto = "thin"

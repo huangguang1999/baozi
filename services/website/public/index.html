@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>包子 — the kitty app for your AI agents</title>
+  <meta name="description" content="The kitty app for your AI agents. A native iOS and Android client for Codex, Claude, OpenCode, Pi, and Droid. Connect over local network, SSH, or Alleycat (peer-to-peer) — from anywhere.">
+  <meta name="theme-color" content="#0C0B0A">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="包子 — the kitty app for your AI agents">
+  <meta property="og:description" content="The kitty app for your AI agents. A native iOS and Android client for Codex, Claude, OpenCode, Pi, and Droid. Connect over local network, SSH, or Alleycat (peer-to-peer) — from anywhere.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://github.com/huangguang1999/baozi/">
+  <meta property="og:site_name" content="包子">
+  <meta property="og:image" content="https://github.com/huangguang1999/baozi/app-icon.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1024">
+  <meta property="og:image:height" content="1024">
+  <meta property="og:image:alt" content="包子 app icon — three kittens peeking out of a cardboard box">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="包子 — the kitty app for your AI agents">
+  <meta name="twitter:description" content="The kitty app for your AI agents. A native iOS and Android client for Codex, Claude, OpenCode, Pi, and Droid.">
+  <meta name="twitter:image" content="https://github.com/huangguang1999/baozi/app-icon.png">
+  <meta name="twitter:image:alt" content="包子 app icon — three kittens peeking out of a cardboard box">
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="/" class="nav-brand">
+        <img src="/app-icon.png" alt="包子 icon">
+        <span>包子</span>
+      </a>
+      <div class="nav-links">
+        <a href="https://github.com/huangguang1999/baozi">github</a>
+        <a href="/privacy">privacy</a>
+        <a href="/terms">terms</a>
+        <a href="/support">support</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-logo fade-in">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%" aria-label="three kittens in a cardboard box">
+          <style>
+            /* ── Left kitten blink ── */
+            @keyframes blink-left {
+              0%, 90%, 100% { r: 4; }
+              93%, 97% { r: 0.5; }
+            }
+            #eye-left-l, #eye-left-r {
+              animation: blink-left 4s ease-in-out infinite;
+            }
+            #eye-left-r { animation-delay: 0.05s; }
+
+            /* ── Right kitten blink (offset timing) ── */
+            @keyframes blink-right {
+              0%, 85%, 100% { r: 4; }
+              88%, 92% { r: 0.5; }
+            }
+            #eye-right-l, #eye-right-r {
+              animation: blink-right 5s ease-in-out infinite;
+              animation-delay: 1.5s;
+            }
+            #eye-right-r { animation-delay: 1.55s; }
+
+            /* ── Center kitten happy-squint pulse ── */
+            @keyframes squint {
+              0%, 80%, 100% { opacity: 1; }
+              85%, 95% { opacity: 0; }
+            }
+            @keyframes unsquint {
+              0%, 80%, 100% { opacity: 0; }
+              85%, 95% { opacity: 1; }
+            }
+            .center-eyes-happy { animation: squint 6s ease-in-out infinite; }
+            .center-eyes-open  { animation: unsquint 6s ease-in-out infinite; }
+
+            /* ── Center kitten meow ── */
+            @keyframes meow-open {
+              0%, 70%, 100% { ry: 0; rx: 0; opacity: 0; }
+              75%, 85% { ry: 6; rx: 4; opacity: 1; }
+            }
+            @keyframes nose-up {
+              0%, 70%, 100% { transform: translateY(0); }
+              75%, 85% { transform: translateY(-3px); }
+            }
+            #center-mouth {
+              animation: meow-open 6s ease-in-out infinite;
+              animation-delay: 0.3s;
+            }
+            #center-nose {
+              animation: nose-up 6s ease-in-out infinite;
+              animation-delay: 0.3s;
+            }
+
+            /* ── Left ear twitch ── */
+            @keyframes ear-twitch-l {
+              0%, 88%, 100% { transform: rotate(0deg); }
+              90%, 94% { transform: rotate(-8deg); }
+              92% { transform: rotate(3deg); }
+            }
+            #ear-left-outer {
+              transform-origin: 140px 200px;
+              animation: ear-twitch-l 7s ease-in-out infinite;
+            }
+
+            /* ── Right kitten ear twitch ── */
+            @keyframes ear-twitch-r {
+              0%, 82%, 100% { transform: rotate(0deg); }
+              84%, 88% { transform: rotate(8deg); }
+              86% { transform: rotate(-3deg); }
+            }
+            #ear-right-outer {
+              transform-origin: 360px 200px;
+              animation: ear-twitch-r 8s ease-in-out infinite;
+              animation-delay: 2s;
+            }
+
+            /* ── Independent bobbing per kitten ── */
+            @keyframes bob-1 {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-5px); }
+            }
+            @keyframes bob-2 {
+              0%, 100% { transform: translateY(0); }
+              40% { transform: translateY(-7px); }
+            }
+            @keyframes bob-3 {
+              0%, 100% { transform: translateY(0); }
+              60% { transform: translateY(-4px); }
+            }
+            #kitten-left {
+              animation: bob-1 4.5s ease-in-out infinite;
+            }
+            #kitten-center {
+              animation: bob-2 5.2s ease-in-out infinite;
+              animation-delay: 0.8s;
+            }
+            #kitten-right {
+              animation: bob-3 3.8s ease-in-out infinite;
+              animation-delay: 1.6s;
+            }
+          </style>
+
+          <!-- Animated kitten group -->
+          <g id="kittens-group">
+            <!-- Left Kitten (Light Gray) -->
+            <g id="kitten-left">
+              <polygon id="ear-left-outer" points="125,200 120,150 150,180" fill="#E5E7EB" />
+              <polygon points="199,200 204,150 174,180" fill="#E5E7EB" />
+              <rect x="120" y="170" width="84" height="100" rx="42" fill="#E5E7EB" />
+              <circle id="eye-left-l" cx="145" cy="210" r="4" fill="#1F2937" />
+              <circle id="eye-left-r" cx="179" cy="210" r="4" fill="#1F2937" />
+              <polygon points="158,220 166,220 162,225" fill="#1F2937" />
+              <!-- Whiskers -->
+              <line x1="120" y1="216" x2="144" y2="220" stroke="#C0C4CA" stroke-width="1.2" stroke-linecap="round" />
+              <line x1="118" y1="222" x2="143" y2="223" stroke="#C0C4CA" stroke-width="1.2" stroke-linecap="round" />
+              <line x1="180" y1="220" x2="204" y2="216" stroke="#C0C4CA" stroke-width="1.2" stroke-linecap="round" />
+              <line x1="181" y1="223" x2="206" y2="222" stroke="#C0C4CA" stroke-width="1.2" stroke-linecap="round" />
+            </g>
+
+            <!-- Right Kitten (Charcoal) -->
+            <g id="kitten-right">
+              <polygon points="301,200 296,150 326,180" fill="#374151" />
+              <polygon id="ear-right-outer" points="375,200 380,150 350,180" fill="#374151" />
+              <rect x="296" y="170" width="84" height="100" rx="42" fill="#374151" />
+              <circle id="eye-right-l" cx="321" cy="210" r="4" fill="#F9FAFB" />
+              <circle id="eye-right-r" cx="355" cy="210" r="4" fill="#F9FAFB" />
+              <polygon points="334,220 342,220 338,225" fill="#F9FAFB" />
+              <!-- Whiskers -->
+              <line x1="296" y1="216" x2="320" y2="220" stroke="#4B5563" stroke-width="1.2" stroke-linecap="round" />
+              <line x1="294" y1="222" x2="319" y2="223" stroke="#4B5563" stroke-width="1.2" stroke-linecap="round" />
+              <line x1="356" y1="220" x2="380" y2="216" stroke="#4B5563" stroke-width="1.2" stroke-linecap="round" />
+              <line x1="357" y1="223" x2="382" y2="222" stroke="#4B5563" stroke-width="1.2" stroke-linecap="round" />
+            </g>
+
+            <!-- Center Kitten (Orange/Ginger) -->
+            <g id="kitten-center">
+              <polygon points="205,160 200,105 240,140" fill="#F59E0B" />
+              <polygon points="295,160 300,105 260,140" fill="#F59E0B" />
+              <rect x="195" y="130" width="110" height="150" rx="55" fill="#F59E0B" />
+              <!-- Happy eyes (default) -->
+              <g class="center-eyes-happy">
+                <path d="M 222 185 Q 230 176 238 185" stroke="#1F2937" stroke-width="3" fill="none" stroke-linecap="round" />
+                <path d="M 262 185 Q 270 176 278 185" stroke="#1F2937" stroke-width="3" fill="none" stroke-linecap="round" />
+              </g>
+              <!-- Open eyes (during meow) -->
+              <g class="center-eyes-open">
+                <circle cx="230" cy="180" r="5" fill="#1F2937" />
+                <circle cx="270" cy="180" r="5" fill="#1F2937" />
+              </g>
+              <!-- Whiskers -->
+              <line x1="195" y1="195" x2="228" y2="200" stroke="#C8860E" stroke-width="1.2" stroke-linecap="round" />
+              <line x1="193" y1="203" x2="227" y2="204" stroke="#C8860E" stroke-width="1.2" stroke-linecap="round" />
+              <line x1="272" y1="200" x2="305" y2="195" stroke="#C8860E" stroke-width="1.2" stroke-linecap="round" />
+              <line x1="273" y1="204" x2="307" y2="203" stroke="#C8860E" stroke-width="1.2" stroke-linecap="round" />
+              <!-- Nose -->
+              <polygon id="center-nose" points="246,198 254,198 250,204" fill="#1F2937" />
+              <!-- Meow mouth -->
+              <ellipse id="center-mouth" cx="250" cy="210" rx="0" ry="0" fill="#1F2937" opacity="0" />
+            </g>
+          </g>
+
+          <!-- Box Structure (stays still) -->
+          <g id="cardboard-box">
+            <path d="M 100 256 L 400 256 L 385 360 C 383 366 378 370 372 370 L 128 370 C 122 370 117 366 115 360 Z" fill="#D98A53" />
+            <rect x="220" y="285" width="60" height="16" rx="8" fill="#B06535" opacity="0.8" />
+            <polygon points="100,256 400,256 397,268 103,268" fill="#B06535" opacity="0.4" />
+            <rect x="90" y="240" width="320" height="16" rx="8" fill="#C27A45" />
+          </g>
+
+          <!-- Paws (on top of box rim) -->
+          <g id="paws">
+            <rect x="135" y="234" width="18" height="28" rx="9" fill="#FFFFFF" />
+            <rect x="165" y="234" width="18" height="28" rx="9" fill="#FFFFFF" />
+            <rect x="225" y="230" width="20" height="30" rx="10" fill="#FFFFFF" />
+            <rect x="255" y="230" width="20" height="30" rx="10" fill="#FFFFFF" />
+            <rect x="317" y="234" width="18" height="28" rx="9" fill="#4B5563" />
+            <rect x="347" y="234" width="18" height="28" rx="9" fill="#4B5563" />
+          </g>
+        </svg>
+      </div>
+
+      <!-- Reusable agent icon symbols -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="ico-codex" viewBox="0 0 24 24">
+          <path fill="#FFFFFF" d="M19.5 0H4.5C2.01 0 0 2.01 0 4.5v15C0 21.99 2.01 24 4.5 24h15c2.49 0 4.5-2.01 4.5-4.5v-15C24 2.01 21.99 0 19.5 0z"/>
+          <path fill="#6F8CFF" d="M9.064 3.344a4.578 4.578 0 0 1 2.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 0 0 .043 0 4.55 4.55 0 0 1 3.046.275l.047.022.116.057a4.581 4.581 0 0 1 2.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 0 1-.134 1.223.123.123 0 0 0 .03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 0 1-2.201 1.388.123.123 0 0 0-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 0 0-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 0 1-1.945-.466 4.544 4.544 0 0 1-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 0 1-.37-.961 4.582 4.582 0 0 1-.014-2.298.124.124 0 0 0 .006-.056.085.085 0 0 0-.027-.048 4.467 4.467 0 0 1-1.034-1.651 3.896 3.896 0 0 1-.251-1.192 5.189 5.189 0 0 1 .141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 0 0 .065-.066 4.51 4.51 0 0 1 .829-1.615 4.535 4.535 0 0 1 1.837-1.388zM12.546 13.909a.637.637 0 0 0 0 1.272h3.636a.637.637 0 1 0 0-1.272h-3.636zM8.462 9.23a.637.637 0 0 0-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 1 0 1.095.649l1.454-2.455a.636.636 0 0 0 .005-.64L8.462 9.23z"/>
+        </symbol>
+        <symbol id="ico-opencode" viewBox="0 0 32 40">
+          <path fill="#4B4646" d="M24 32H8V16H24V32Z"/>
+          <path fill="#F1ECEC" d="M24 8H8V32H24V8ZM32 40H0V0H32V40Z"/>
+        </symbol>
+        <symbol id="ico-pi" viewBox="0 0 24 24">
+          <path fill="currentColor" fill-rule="evenodd" d="M5 5H16V12H12V16H9V19H5ZM9 9V12H12V9Z"/>
+          <path fill="currentColor" d="M16 12H19V19H16Z"/>
+        </symbol>
+        <symbol id="ico-claude" viewBox="0 0 24 24">
+          <path fill="#D97757" fill-rule="nonzero" d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/>
+        </symbol>
+      </svg>
+
+      <h1 class="fade-in fade-in-d1">
+        the <span class="warm">kitty</span> app for
+        <span class="agent-carousel" aria-label="codex, opencode, pi, claude, droid">
+          <span class="agent-track">
+            <span class="agent-item">
+              <span class="agent-name">codex</span>
+              <svg class="agent-icon" aria-hidden="true"><use href="#ico-codex"/></svg>
+            </span>
+            <span class="agent-item">
+              <span class="agent-name">opencode</span>
+              <svg class="agent-logo" aria-hidden="true"><use href="#ico-opencode"/></svg>
+            </span>
+            <span class="agent-item">
+              <span class="agent-name">pi</span>
+              <svg class="agent-icon" aria-hidden="true"><use href="#ico-pi"/></svg>
+            </span>
+            <span class="agent-item">
+              <span class="agent-name">claude</span>
+              <svg class="agent-icon" aria-hidden="true"><use href="#ico-claude"/></svg>
+            </span>
+            <span class="agent-item">
+              <span class="agent-name">droid</span>
+              <img class="agent-icon" src="/agent_droid.svg" alt="" aria-hidden="true">
+            </span>
+            <span class="agent-item" aria-hidden="true">
+              <span class="agent-name">codex</span>
+              <svg class="agent-icon" aria-hidden="true"><use href="#ico-codex"/></svg>
+            </span>
+          </span>
+        </span>
+      </h1>
+
+      <p class="hero-sub fade-in fade-in-d2">
+        a native ios + android client for codex, claude, opencode, pi, and droid.
+        connect from your local network, over ssh, or via alleycat — from anywhere.
+        <span class="hero-oss">open source and always free.</span>
+      </p>
+
+      <div class="hero-cta fade-in fade-in-d3">
+        <a href="https://apps.apple.com/us/app/kitty包子/id6759521788" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          App Store
+        </a>
+        <button type="button" class="btn btn-primary" id="testflight-trigger" aria-haspopup="dialog" aria-controls="testflight-form">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          TestFlight
+          <span class="btn-badge">beta</span>
+        </button>
+        <a href="https://play.google.com/store/apps/details?id=com.kris99.baozi.android" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-1.4l2.458 1.42c.594.344.594 1.202 0 1.546l-2.458 1.42-2.534-2.534 2.534-2.852zM5.864 2.658L16.8 8.99l-2.302 2.302-8.635-8.635z"/></svg>
+          Google Play
+        </a>
+        <a href="https://github.com/huangguang1999/baozi" class="btn btn-secondary">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          GitHub
+        </a>
+      </div>
+      <p class="hero-coming-soon fade-in fade-in-d4"></p>
+
+      <form id="testflight-form" class="tf-form" hidden aria-label="Request a TestFlight invite"
+            action="https://signup.github.com/huangguang1999/baozi/signup" method="post" novalidate>
+        <p class="tf-form-lead">Enter your Apple ID email — we'll add you to the TestFlight beta and Apple will send the invite.</p>
+        <div class="tf-form-row">
+          <label class="tf-form-field">
+            <span class="tf-form-label">Email</span>
+            <input type="email" name="email" id="testflight-email" required
+                   autocomplete="email" inputmode="email" spellcheck="false"
+                   placeholder="you@example.com">
+          </label>
+          <button type="submit" class="btn btn-primary tf-form-submit">Request invite</button>
+        </div>
+        <p class="tf-form-status" role="status" aria-live="polite"></p>
+        <p class="tf-form-fineprint">Your email is only used to send the TestFlight invite.</p>
+      </form>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <span class="section-label fade-in">Features</span>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <span class="feature-icon">🤖</span>
+          <h3>multi-agent</h3>
+          <p>Codex, Claude, OpenCode, Pi, and Droid — all in one app. Switch between them per session, or run several in parallel.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📡</span>
+          <h3>auto-discovery</h3>
+          <p>Finds agents running on your local network automatically. No IP addresses, no manual configuration.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🐈</span>
+          <h3>alleycat</h3>
+          <p>Peer-to-peer pairing via QR code. Connect through NATs and corporate firewalls — no VPN, no public IP, no port forwarding.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔑</span>
+          <h3>ssh connections</h3>
+          <p>Connect to any remote machine over SSH. 包子 starts your agent on the server for you.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🎙</span>
+          <h3>voice input</h3>
+          <p>Real-time voice with your agent — transcription and conversation happen seamlessly while you walk, drive, or think.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🎨</span>
+          <h3>70+ themes</h3>
+          <p>Dozens of editor themes — Catppuccin, Dracula, Nord, Gruvbox, Solarized, and more. Dark and light.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="how-it-works">
+    <div class="container">
+      <span class="section-label">How it works</span>
+      <h2>three steps, zero config</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>find your server</h3>
+          <p>Auto-discovery on your local network, alleycat QR pairing for anywhere else, or paste an SSH address.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>pick an agent</h3>
+          <p>Codex, Claude, OpenCode, Pi, or Droid. 包子 starts the agent on your server for you.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>get to work</h3>
+          <p>Pick up exactly where you left off. Sessions, threads, and context follow you everywhere.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-left">
+        <div class="footer-brand">
+          <img src="/app-icon.png" alt="">
+          <span>&copy; 2026 包子</span>
+        </div>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/huangguang1999/baozi">github</a>
+        <a href="/privacy">privacy</a>
+        <a href="/terms">terms</a>
+        <a href="/support">support</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var trigger = document.getElementById('testflight-trigger');
+      var form = document.getElementById('testflight-form');
+      if (!trigger || !form) return;
+
+      var status = form.querySelector('.tf-form-status');
+      var input = form.querySelector('input[name="email"]');
+      var submit = form.querySelector('button[type="submit"]');
+
+      function setStatus(msg, kind) {
+        status.textContent = msg || '';
+        status.dataset.kind = kind || '';
+      }
+
+      trigger.addEventListener('click', function () {
+        form.hidden = false;
+        form.classList.add('tf-form--visible');
+        setStatus('', '');
+        setTimeout(function () { input && input.focus(); }, 50);
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = (input.value || '').trim();
+        if (!email || email.indexOf('@') < 1) {
+          setStatus('Please enter a valid email address.', 'error');
+          return;
+        }
+        submit.disabled = true;
+        setStatus('Sending…', 'pending');
+
+        fetch(form.action, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ email: email })
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (body) {
+            return { ok: r.ok, status: r.status, body: body };
+          });
+        }).then(function (res) {
+          if (res.ok) {
+            setStatus('Invite request sent. Check your inbox for a TestFlight invite from Apple.', 'success');
+            input.value = '';
+          } else if (res.status === 409) {
+            setStatus('That email is already on the beta. Check your inbox or your TestFlight app.', 'success');
+          } else if (res.status === 429) {
+            setStatus('Too many requests. Please try again in a few minutes.', 'error');
+          } else {
+            var msg = (res.body && res.body.error) || 'Something went wrong. Please try again.';
+            setStatus(msg, 'error');
+          }
+        }).catch(function () {
+          setStatus('Network error. Please try again.', 'error');
+        }).then(function () {
+          submit.disabled = false;
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>

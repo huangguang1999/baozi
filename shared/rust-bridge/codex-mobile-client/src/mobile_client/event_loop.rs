@@ -1,0 +1,1899 @@
+use super::*;
+use codex_utils_absolute_path::{AbsolutePathBuf, AbsolutePathBufGuard};
+use std::path::{Path, PathBuf};
+use std::time::Instant;
+const PATH_FIELD_KEYS: &[&str] = &[
+    "agentPath",
+    "cwd",
+    "destinationPath",
+    "instructionSources",
+    "marketplacePath",
+    "movePath",
+    "path",
+    "readableRoots",
+    "savedPath",
+    "sourcePath",
+    "writableRoots",
+];
+
+fn session_is_current(
+    sessions: &Arc<RwLock<HashMap<String, Arc<ServerSession>>>>,
+    server_id: &str,
+    session: &Arc<ServerSession>,
+) -> bool {
+    sessions
+        .read()
+        .ok()
+        .and_then(|guard| guard.get(server_id).cloned())
+        .is_some_and(|current| Arc::ptr_eq(&current, session))
+}
+
+impl MobileClient {
+    pub(super) fn spawn_event_reader(&self, server_id: String, session: Arc<ServerSession>) {
+        let mut events = session.events();
+        let processor = Arc::clone(&self.event_processor);
+        let recorder = Arc::clone(&self.recorder);
+        let oauth_callback_tunnels = Arc::clone(&self.oauth_callback_tunnels);
+        let oauth_session = Arc::clone(&session);
+        let sessions = Arc::clone(&self.sessions);
+        let app_store = Arc::clone(&self.app_store);
+        let widget_waiters = Arc::clone(&self.widget_waiters);
+        let saved_apps_directory = Arc::clone(&self.saved_apps_directory);
+        Self::spawn_detached(async move {
+            loop {
+                let event = events.recv().await;
+                if !session_is_current(&sessions, &server_id, &oauth_session) {
+                    info!("event reader exiting for stale server session {server_id}");
+                    break;
+                }
+                match event {
+                    Ok(ServerEvent::Notification {
+                        runtime_kind,
+                        notification,
+                    }) => {
+                        note_notification_runtime(
+                            &app_store,
+                            &server_id,
+                            runtime_kind.clone(),
+                            &notification,
+                        );
+                        if let upstream::ServerNotification::AccountLoginCompleted(payload) =
+                            &notification
+                        {
+                            let maybe_tunnel = {
+                                let mut tunnels = oauth_callback_tunnels.lock().await;
+                                match payload.login_id.as_deref() {
+                                    Some(login_id)
+                                        if tunnels
+                                            .get(&server_id)
+                                            .map(|existing| existing.login_id.as_str())
+                                            == Some(login_id) =>
+                                    {
+                                        tunnels.remove(&server_id)
+                                    }
+                                    _ => None,
+                                }
+                            };
+                            if let Some(tunnel) = maybe_tunnel
+                                && let Some(ssh_client) = oauth_session.ssh_client()
+                            {
+                                ssh_client.abort_forward_port(tunnel.local_port).await;
+                            }
+                        }
+                        // Log the variant kind only — full `{:?}` bodies on
+                        // hot variants (TurnDiffUpdated, AgentMessageDelta,
+                        // CommandExecutionOutputDelta) allocate hundreds of
+                        // KB per event during streaming.
+                        debug!(
+                            "event reader server_id={} notification={}",
+                            server_id, notification
+                        );
+                        recorder.record_notification(&server_id, &notification);
+                        processor.process_notification(
+                            &server_id,
+                            runtime_kind.clone(),
+                            &notification,
+                        );
+                        note_notification_runtime(
+                            &app_store,
+                            &server_id,
+                            runtime_kind,
+                            &notification,
+                        );
+                    }
+                    Ok(ServerEvent::LegacyNotification {
+                        runtime_kind: _,
+                        method,
+                        params,
+                    }) => {
+                        // Log only the method name — full params JSON can be
+                        // unbounded (e.g. large diffs / outputs).
+                        debug!(
+                            "event reader server_id={} legacy_method={}",
+                            server_id, method
+                        );
+                        processor.process_legacy_notification(&server_id, &method, &params);
+                    }
+                    Ok(ServerEvent::Request {
+                        runtime_kind,
+                        request,
+                    }) => {
+                        debug!("event reader server_id={} request={:?}", server_id, request);
+                        let dynamic_tool_request = match &request {
+                            upstream::ServerRequest::DynamicToolCall { request_id, params } => {
+                                Some((request_id.clone(), params.clone()))
+                            }
+                            _ => None,
+                        };
+                        processor.process_server_request(&server_id, &request);
+                        if let Some((request_id, params)) = dynamic_tool_request {
+                            let server_id = server_id.clone();
+                            let session = Arc::clone(&oauth_session);
+                            let sessions = Arc::clone(&sessions);
+                            let app_store = Arc::clone(&app_store);
+                            let widget_waiters = Arc::clone(&widget_waiters);
+                            let saved_apps_directory = Arc::clone(&saved_apps_directory);
+                            MobileClient::spawn_detached(async move {
+                                if let Err(error) = handle_dynamic_tool_call_request(
+                                    session,
+                                    sessions,
+                                    app_store,
+                                    widget_waiters,
+                                    saved_apps_directory,
+                                    request_id,
+                                    params,
+                                    runtime_kind,
+                                )
+                                .await
+                                {
+                                    warn!(
+                                        "MobileClient: failed to handle dynamic tool call on {}: {}",
+                                        server_id, error
+                                    );
+                                }
+                            });
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Closed) => {
+                        info!("event stream closed for {server_id}");
+                        break;
+                    }
+                    Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                        warn!(
+                            "event reader lagged server_id={} skipped={}",
+                            server_id, skipped
+                        );
+                    }
+                }
+            }
+        });
+    }
+
+    pub(super) fn spawn_health_reader(&self, server_id: String, session: Arc<ServerSession>) {
+        let mut health_rx = session.health();
+        let processor = Arc::clone(&self.event_processor);
+        let sessions = Arc::clone(&self.sessions);
+        let app_store = Arc::clone(&self.app_store);
+        Self::spawn_detached(async move {
+            if !session_is_current(&sessions, &server_id, &session) {
+                info!("health reader exiting for stale server session {server_id}");
+                return;
+            }
+            processor.emit_connection_state(&server_id, "connecting");
+            // Initialize as if previously Connected so the first observation —
+            // which after a successful connect_* call is normally Connected —
+            // does not double-fire alongside spawn_post_connect_warmup. A real
+            // disconnect/reconnect cycle still triggers the transition below.
+            let mut prev_connected: bool = true;
+            loop {
+                if !session_is_current(&sessions, &server_id, &session) {
+                    info!("health reader exiting for stale server session {server_id}");
+                    break;
+                }
+                let health = health_rx.borrow().clone();
+                let is_connected = matches!(
+                    health,
+                    crate::session::connection::ConnectionHealth::Connected
+                );
+                let health_wire = match health {
+                    crate::session::connection::ConnectionHealth::Disconnected => "disconnected",
+                    crate::session::connection::ConnectionHealth::Connecting { .. } => "connecting",
+                    crate::session::connection::ConnectionHealth::Connected => "connected",
+                    crate::session::connection::ConnectionHealth::Unresponsive { .. } => {
+                        "unresponsive"
+                    }
+                };
+                processor.emit_connection_state(&server_id, health_wire);
+
+                if !prev_connected && is_connected {
+                    let session = sessions
+                        .read()
+                        .ok()
+                        .and_then(|guard| guard.get(&server_id).cloned());
+                    if let Some(session) = session {
+                        run_connect_warmup(
+                            Arc::clone(&sessions),
+                            Arc::clone(&app_store),
+                            server_id.clone(),
+                            session,
+                            "reconnect",
+                        );
+                    }
+                    // Re-subscribe per-thread listeners on the new
+                    // connection: server-side `ConnectionId` changed, so
+                    // turn-stream events would otherwise be silently
+                    // dropped until the user navigates.
+                    run_post_reconnect_resubscribe(Arc::clone(&app_store), server_id.clone());
+                }
+                prev_connected = is_connected;
+
+                if health_rx.changed().await.is_err() {
+                    break;
+                }
+            }
+        });
+    }
+
+    pub(super) fn mark_server_transport_disconnected(&self, server_id: &str) {
+        self.clear_direct_resume_markers_for_server(server_id);
+        self.app_store
+            .update_server_health(server_id, ServerHealthSnapshot::Disconnected);
+    }
+
+    pub(super) fn reconcile_transport_error(&self, server_id: &str, error: &RpcError) {
+        if matches!(error, RpcError::Transport(_)) {
+            self.mark_server_transport_disconnected(server_id);
+        }
+    }
+
+    pub(crate) fn get_session(&self, server_id: &str) -> Result<Arc<ServerSession>, RpcError> {
+        self.sessions_read().get(server_id).cloned().ok_or_else(|| {
+            self.mark_server_transport_disconnected(server_id);
+            RpcError::Transport(TransportError::Disconnected)
+        })
+    }
+
+    /// Send a raw `ClientRequest` and return the JSON response value.
+    /// Used by tooling (e.g. fixture export) that needs raw upstream data.
+    pub async fn request_raw_for_server(
+        &self,
+        server_id: &str,
+        request: upstream::ClientRequest,
+    ) -> Result<serde_json::Value, String> {
+        let session = self.get_session(server_id).map_err(|e| e.to_string())?;
+        session.request_client(request).await.map_err(|error| {
+            self.reconcile_transport_error(server_id, &error);
+            error.to_string()
+        })
+    }
+
+    /// Return the configs of all currently connected servers (public for tooling).
+    pub fn connected_server_configs(&self) -> Vec<ServerConfig> {
+        self.sessions_read()
+            .values()
+            .map(|s| s.config().clone())
+            .collect()
+    }
+
+    pub(crate) fn snapshot_thread(&self, key: &ThreadKey) -> Result<ThreadSnapshot, RpcError> {
+        self.app_store
+            .snapshot()
+            .threads
+            .get(key)
+            .cloned()
+            .ok_or_else(|| RpcError::Deserialization(format!("unknown thread {}", key.thread_id)))
+    }
+
+    pub async fn request_typed_for_server<R>(
+        &self,
+        server_id: &str,
+        request: upstream::ClientRequest,
+    ) -> Result<R, String>
+    where
+        R: serde::de::DeserializeOwned,
+    {
+        let runtime_kind = self.runtime_for_request(server_id, &request);
+        self.request_typed_for_server_runtime(server_id, runtime_kind, request)
+            .await
+    }
+
+    pub async fn request_typed_for_server_runtime<R>(
+        &self,
+        server_id: &str,
+        runtime_kind: AgentRuntimeKind,
+        request: upstream::ClientRequest,
+    ) -> Result<R, String>
+    where
+        R: serde::de::DeserializeOwned,
+    {
+        let mut request = request;
+        self.normalize_model_selection_for_request(server_id, runtime_kind.clone(), &mut request);
+        self.recorder.record_request(server_id, &request);
+        let wire_method = client_request_wire_method(&request);
+        let started_at = Instant::now();
+        let session = self.get_session(server_id).map_err(|e| e.to_string())?;
+        info!(
+            "server request start server_id={} runtime={:?} method={}",
+            server_id, runtime_kind, wire_method
+        );
+        let value = session
+            .request_client_for_runtime(runtime_kind.clone(), request)
+            .await
+            .map_err(|error| {
+                self.reconcile_transport_error(server_id, &error);
+                warn!(
+                    "server request failed server_id={} runtime={:?} method={} duration_ms={} error={}",
+                    server_id,
+                    runtime_kind,
+                    wire_method,
+                    started_at.elapsed().as_millis(),
+                    error
+                );
+                error.to_string()
+            })?;
+        info!(
+            "server request ok server_id={} runtime={:?} method={} duration_ms={}",
+            server_id,
+            runtime_kind,
+            wire_method,
+            started_at.elapsed().as_millis()
+        );
+        self.app_store.note_server_direct_request_success(server_id);
+        let (parsed, legacy_permission_profile) =
+            deserialize_typed_response_with_legacy_flag(&value);
+        if legacy_permission_profile {
+            // v0.124 remotes never support turn pagination — mark the
+            // capability off as soon as we recognise the legacy shape so
+            // downstream code paths (load_thread_turns_page) short-circuit
+            // instead of waiting for the runtime -32601 probe.
+            self.app_store
+                .set_server_supports_turn_pagination(server_id, false);
+        }
+        parsed.map_err(|e| {
+            let error = format_typed_rpc_deserialization_error(wire_method, &e, &value);
+            warn!("{error}\nraw payload: {value}");
+            error
+        })
+    }
+
+    fn runtime_for_request(
+        &self,
+        server_id: &str,
+        request: &upstream::ClientRequest,
+    ) -> AgentRuntimeKind {
+        if let upstream::ClientRequest::ThreadStart { params, .. } = request {
+            return self.runtime_for_thread_start(server_id, None, params.model.as_deref());
+        }
+
+        let thread_id = match request {
+            upstream::ClientRequest::ThreadRead { params, .. } => Some(params.thread_id.as_str()),
+            upstream::ClientRequest::ThreadResume { params, .. } => Some(params.thread_id.as_str()),
+            upstream::ClientRequest::ThreadFork { params, .. } => Some(params.thread_id.as_str()),
+            upstream::ClientRequest::ThreadRollback { params, .. } => {
+                Some(params.thread_id.as_str())
+            }
+            upstream::ClientRequest::ThreadUnsubscribe { params, .. } => {
+                Some(params.thread_id.as_str())
+            }
+            upstream::ClientRequest::ThreadArchive { params, .. } => {
+                Some(params.thread_id.as_str())
+            }
+            upstream::ClientRequest::ThreadSetName { params, .. } => {
+                Some(params.thread_id.as_str())
+            }
+            upstream::ClientRequest::ThreadTurnsList { params, .. } => {
+                Some(params.thread_id.as_str())
+            }
+            upstream::ClientRequest::TurnStart { params, .. } => Some(params.thread_id.as_str()),
+            upstream::ClientRequest::TurnSteer { params, .. } => Some(params.thread_id.as_str()),
+            _ => None,
+        };
+        thread_id
+            .map(|thread_id| {
+                self.runtime_for_thread(&ThreadKey {
+                    server_id: server_id.to_string(),
+                    thread_id: thread_id.to_string(),
+                })
+            })
+            .unwrap_or("codex".to_string())
+    }
+
+    pub(super) fn pending_approval(&self, request_id: &str) -> Result<PendingApproval, RpcError> {
+        self.app_store
+            .snapshot()
+            .pending_approvals
+            .into_iter()
+            .find(|approval| approval.id == request_id)
+            .ok_or_else(|| {
+                RpcError::Deserialization(format!("unknown approval request {request_id}"))
+            })
+    }
+
+    pub(super) fn pending_user_input(
+        &self,
+        request_id: &str,
+    ) -> Result<PendingUserInputRequest, RpcError> {
+        self.app_store
+            .snapshot()
+            .pending_user_inputs
+            .into_iter()
+            .find(|request| request.id == request_id)
+            .ok_or_else(|| {
+                RpcError::Deserialization(format!("unknown user input request {request_id}"))
+            })
+    }
+
+    pub(crate) fn spawn_detached<F>(future: F)
+    where
+        F: Future<Output = ()> + Send + 'static,
+    {
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            handle.spawn(future);
+        } else {
+            // Route detached mobile work onto the shared runtime instead of
+            // creating ad-hoc current-thread runtimes with tiny iOS stacks.
+            crate::ffi::shared::shared_runtime().spawn(future);
+        }
+    }
+}
+
+fn deserialize_typed_response<R>(value: &serde_json::Value) -> Result<R, serde_json::Error>
+where
+    R: serde::de::DeserializeOwned,
+{
+    let (result, _legacy) = deserialize_typed_response_with_legacy_flag(value);
+    result
+}
+
+/// Returns the deserialized response and a flag indicating whether the
+/// legacy pre-v0.125 `PermissionProfile` struct shape was detected anywhere
+/// in the payload. Callers can use the flag to flip server capability
+/// bookkeeping (e.g. `supports_turn_pagination = false`) before further
+/// processing.
+fn deserialize_typed_response_with_legacy_flag<R>(
+    value: &serde_json::Value,
+) -> (Result<R, serde_json::Error>, bool)
+where
+    R: serde::de::DeserializeOwned,
+{
+    let mut normalized = value.clone();
+    let legacy_permission_profile = normalize_legacy_permission_profile_fields(&mut normalized);
+    normalize_empty_cwd_fields(&mut normalized, None);
+    normalize_default_service_tier(&mut normalized);
+    normalize_legacy_v0_128_compat(&mut normalized);
+    normalize_legacy_thread_status(&mut normalized);
+    normalize_dynamic_tool_content_item_aliases(&mut normalized);
+    normalize_tool_status_aliases(&mut normalized);
+    normalize_command_action_aliases(&mut normalized);
+    normalize_relative_absolute_path_fields(&mut normalized, None);
+    let parsed = if let Some(base_path) = response_deserialization_base(&normalized) {
+        let _guard = AbsolutePathBufGuard::new(base_path.as_path());
+        serde_json::from_value(normalized)
+    } else {
+        serde_json::from_value(normalized)
+    };
+    (parsed, legacy_permission_profile)
+}
+
+fn normalize_empty_cwd_fields(value: &mut serde_json::Value, inherited_base: Option<&Path>) {
+    match value {
+        serde_json::Value::Object(map) => {
+            let is_command_execution = object_type(map) == Some("commandExecution");
+            let fallback_cwd = inherited_base
+                .map(|base| base.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "/".to_string());
+            match map.get_mut("cwd") {
+                Some(serde_json::Value::String(cwd)) if cwd.is_empty() => {
+                    *cwd = fallback_cwd.clone();
+                }
+                Some(cwd) if cwd.is_null() => {
+                    *cwd = serde_json::Value::String(fallback_cwd.clone());
+                }
+                None if is_command_execution => {
+                    map.insert(
+                        "cwd".to_string(),
+                        serde_json::Value::String(fallback_cwd.clone()),
+                    );
+                }
+                _ => {}
+            }
+            let local_base = absolute_path_from_value(map.get("cwd"))
+                .or_else(|| inherited_base.map(Path::to_path_buf));
+            let next_base = local_base.as_deref();
+            for child in map.values_mut() {
+                normalize_empty_cwd_fields(child, next_base);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for child in items {
+                normalize_empty_cwd_fields(child, inherited_base);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn normalize_tool_status_aliases(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            match object_type(map) {
+                Some("commandExecution") | Some("fileChange") => {
+                    normalize_status_field(map, true);
+                }
+                Some("mcpToolCall") | Some("dynamicToolCall") | Some("collabAgentToolCall") => {
+                    normalize_status_field(map, false);
+                }
+                _ => {}
+            }
+            normalize_collab_agent_state_statuses(map);
+
+            for child in map.values_mut() {
+                normalize_tool_status_aliases(child);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for child in items {
+                normalize_tool_status_aliases(child);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn normalize_status_field(
+    map: &mut serde_json::Map<String, serde_json::Value>,
+    allow_declined: bool,
+) {
+    let Some(serde_json::Value::String(status)) = map.get_mut("status") else {
+        return;
+    };
+    if let Some(normalized) = normalize_operation_status_alias(status, allow_declined) {
+        *status = normalized;
+    }
+}
+
+fn normalize_operation_status_alias(raw: &str, allow_declined: bool) -> Option<String> {
+    let normalized = match raw.trim().to_ascii_lowercase().as_str() {
+        "pending" | "running" | "queued" | "started" | "in_progress" | "in-progress"
+        | "inprogress" => "inProgress",
+        "completed" | "complete" | "success" | "succeeded" | "done" => "completed",
+        "declined" | "denied" | "rejected" if allow_declined => "declined",
+        "declined" | "denied" | "rejected" => "failed",
+        "error" | "failed" | "failure" | "cancelled" | "canceled" | "aborted" => "failed",
+        _ => return None,
+    };
+    (normalized != raw).then(|| normalized.to_string())
+}
+
+fn normalize_collab_agent_state_statuses(map: &mut serde_json::Map<String, serde_json::Value>) {
+    let Some(serde_json::Value::Object(agent_states)) = map.get_mut("agentsStates") else {
+        return;
+    };
+    for state in agent_states.values_mut() {
+        let Some(state_map) = state.as_object_mut() else {
+            continue;
+        };
+        let Some(serde_json::Value::String(status)) = state_map.get_mut("status") else {
+            continue;
+        };
+        let normalized = match status.trim().to_ascii_lowercase().as_str() {
+            "pending" | "pending_init" | "pending-init" | "pendinginit" => "pendingInit",
+            "running" | "in_progress" | "in-progress" | "inprogress" | "started" => "running",
+            "completed" | "complete" | "success" | "succeeded" | "done" => "completed",
+            "error" | "errored" | "failed" | "failure" | "cancelled" | "canceled" | "aborted" => {
+                "errored"
+            }
+            "shutdown" => "shutdown",
+            "interrupted" => "interrupted",
+            "not_found" | "not-found" | "notfound" => "notFound",
+            _ => continue,
+        };
+        if normalized != status {
+            *status = normalized.to_string();
+        }
+    }
+}
+
+fn normalize_default_service_tier(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            if let Some(service_tier) = map.get_mut("serviceTier")
+                && service_tier.as_str() == Some("default")
+            {
+                *service_tier = serde_json::Value::Null;
+            }
+            for child in map.values_mut() {
+                normalize_default_service_tier(child);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for child in items {
+                normalize_default_service_tier(child);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Inject defaults for fields that upstream rust-v0.129.0 made required on
+/// `Thread`, `ItemStartedNotification`, and `ItemCompletedNotification`.
+/// Servers running older codex versions (e.g., rust-v0.128.0) don't emit
+/// these fields, so the typed deserializer would fail with `missing field
+/// 'sessionId'` etc. We mirror legacy server behavior here rather than
+/// patching the upstream protocol crate so the litter-side build can stay
+/// upstream-faithful.
+///
+/// The `Thread.sessionId` fallback follows upstream's own convention for
+/// stored/unloaded threads (see PR #21336): when no live session id is
+/// known, treat `sessionId == id`. Litter's sub-agent grouping uses
+/// `Thread.source` + `parent_thread_id` rather than `session_id`, so the
+/// fallback is harmless there; for any future upstream-style consumer this
+/// matches what app-server itself returns for stored threads.
+fn normalize_legacy_v0_128_compat(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            // Thread: detected by id+preview+status+source which all v2
+            // Thread payloads carry. sessionId was added in v0.129.
+            if map.contains_key("id")
+                && map.contains_key("preview")
+                && map.contains_key("status")
+                && map.contains_key("source")
+                && !map.contains_key("sessionId")
+            {
+                let fallback = map.get("id").cloned().unwrap_or(serde_json::Value::Null);
+                map.insert("sessionId".to_string(), fallback);
+            }
+            // Item lifecycle notifications: detected by item+threadId+turnId.
+            // startedAtMs/completedAtMs were added in v0.129.
+            if map.contains_key("item")
+                && map.contains_key("threadId")
+                && map.contains_key("turnId")
+            {
+                if !map.contains_key("startedAtMs") {
+                    map.insert(
+                        "startedAtMs".to_string(),
+                        serde_json::Value::Number(0.into()),
+                    );
+                }
+                if !map.contains_key("completedAtMs") {
+                    map.insert(
+                        "completedAtMs".to_string(),
+                        serde_json::Value::Number(0.into()),
+                    );
+                }
+            }
+            for child in map.values_mut() {
+                normalize_legacy_v0_128_compat(child);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for child in items {
+                normalize_legacy_v0_128_compat(child);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Wrap bare-string `status` values inside Thread-shaped objects into the
+/// canonical tagged form (`{"type": "..."}`). Upstream `ThreadStatus` is
+/// `#[serde(tag = "type")]`, but third-party bridges (older
+/// `alleycat-opencode-bridge` versions) have shipped `"status": "notLoaded"`
+/// as a bare string, which made the typed deserializer reject the entire
+/// `thread/list` response and left those threads invisible in the sidebar.
+/// The detection mirrors `normalize_legacy_v0_128_compat`'s Thread shape
+/// (id+preview+source) so we only rewrite genuine Thread payloads, not the
+/// other unrelated `status` fields scattered through item/tool payloads.
+fn normalize_legacy_thread_status(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            let looks_like_thread = map.contains_key("id")
+                && map.contains_key("preview")
+                && map.contains_key("source")
+                && map.contains_key("status");
+            if looks_like_thread && let Some(serde_json::Value::String(tag)) = map.get("status") {
+                let tag = tag.clone();
+                if matches!(tag.as_str(), "notLoaded" | "idle" | "systemError") {
+                    let mut wrapped = serde_json::Map::new();
+                    wrapped.insert("type".to_string(), serde_json::Value::String(tag));
+                    map.insert("status".to_string(), serde_json::Value::Object(wrapped));
+                }
+            }
+            for child in map.values_mut() {
+                normalize_legacy_thread_status(child);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for child in items {
+                normalize_legacy_thread_status(child);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn normalize_dynamic_tool_content_item_aliases(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            if let Some(serde_json::Value::Array(items)) = map.get_mut("contentItems") {
+                for item in items {
+                    if let Some(item_map) = item.as_object_mut() {
+                        let kind = item_map
+                            .get("type")
+                            .and_then(|value| value.as_str())
+                            .map(str::to_string);
+                        if kind.is_none() {
+                            let text = item_map
+                                .get("text")
+                                .and_then(|text| text.as_str())
+                                .map(str::to_string)
+                                .or_else(|| {
+                                    item_map
+                                        .get("file")
+                                        .and_then(|file| file.get("content"))
+                                        .and_then(|content| content.as_str())
+                                        .map(str::to_string)
+                                })
+                                .unwrap_or_else(|| {
+                                    serde_json::to_string(&serde_json::Value::Object(
+                                        item_map.clone(),
+                                    ))
+                                    .unwrap_or_default()
+                                });
+                            item_map.insert(
+                                "type".to_string(),
+                                serde_json::Value::String("inputText".to_string()),
+                            );
+                            item_map.insert("text".to_string(), serde_json::Value::String(text));
+                        }
+                        if matches!(kind.as_deref(), Some("text" | "inputText"))
+                            && !item_map.contains_key("text")
+                            && let Some(text) = item_map
+                                .get("file")
+                                .and_then(|file| file.get("content"))
+                                .and_then(|content| content.as_str())
+                                .map(str::to_string)
+                        {
+                            item_map.insert("text".to_string(), serde_json::Value::String(text));
+                        }
+                        if let Some(serde_json::Value::String(kind)) = item_map.get_mut("type") {
+                            match kind.as_str() {
+                                "text" => *kind = "inputText".to_string(),
+                                "image" => *kind = "inputImage".to_string(),
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            }
+
+            for child in map.values_mut() {
+                normalize_dynamic_tool_content_item_aliases(child);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for child in items {
+                normalize_dynamic_tool_content_item_aliases(child);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn normalize_command_action_aliases(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            if object_type(map) == Some("commandExecution") {
+                let parent_command = map
+                    .get("command")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                if let Some(serde_json::Value::Array(actions)) = map.get_mut("commandActions") {
+                    for action in actions {
+                        normalize_command_action(action, &parent_command);
+                    }
+                }
+            }
+
+            for child in map.values_mut() {
+                normalize_command_action_aliases(child);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for child in items {
+                normalize_command_action_aliases(child);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn normalize_command_action(action: &mut serde_json::Value, parent_command: &str) {
+    let Some(map) = action.as_object_mut() else {
+        return;
+    };
+    if let Some(serde_json::Value::String(kind)) = map.get_mut("type")
+        && kind == "list_files"
+    {
+        *kind = "listFiles".to_string();
+    }
+
+    let command = map
+        .get("command")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| infer_command_action_command(map, parent_command));
+    if !matches!(
+        map.get("command"),
+        Some(serde_json::Value::String(value)) if !value.is_empty()
+    ) {
+        map.insert(
+            "command".to_string(),
+            serde_json::Value::String(command.clone()),
+        );
+    }
+
+    if object_type(map) == Some("read") && !map.contains_key("name") {
+        map.insert(
+            "name".to_string(),
+            serde_json::Value::String(infer_command_action_name(map)),
+        );
+    }
+}
+
+fn infer_command_action_command(
+    map: &serde_json::Map<String, serde_json::Value>,
+    parent_command: &str,
+) -> String {
+    if !parent_command.is_empty() {
+        return parent_command.to_string();
+    }
+    match object_type(map) {
+        Some("read") => map
+            .get("path")
+            .and_then(|value| value.as_str())
+            .map(|path| format!("read {path}"))
+            .unwrap_or_else(|| "read".to_string()),
+        Some("search") => map
+            .get("query")
+            .and_then(|value| value.as_str())
+            .map(|query| format!("grep {query}"))
+            .unwrap_or_else(|| "search".to_string()),
+        Some("listFiles") => map
+            .get("path")
+            .and_then(|value| value.as_str())
+            .map(|path| format!("ls {path}"))
+            .unwrap_or_else(|| "ls".to_string()),
+        _ => "unknown".to_string(),
+    }
+}
+
+fn infer_command_action_name(map: &serde_json::Map<String, serde_json::Value>) -> String {
+    map.get("name")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .or_else(|| {
+            map.get("path")
+                .and_then(|value| value.as_str())
+                .and_then(|path| {
+                    path.rsplit(['/', '\\'])
+                        .find(|part| !part.is_empty())
+                        .map(str::to_string)
+                })
+        })
+        .unwrap_or_else(|| "file".to_string())
+}
+
+/// Walk the JSON tree and upgrade any legacy v0.124 `PermissionProfile`
+/// struct shape into the v0.125 tagged-enum shape. Legacy payloads omit the
+/// `type` discriminator entirely; the only legacy shape encountered in the
+/// wild is equivalent to the new `Managed { network, fileSystem }` variant.
+///
+/// Also upgrades the inner `PermissionProfileFileSystemPermissions` (the
+/// value under `fileSystem`) which was similarly refactored into a tagged
+/// enum — legacy servers always sent the equivalent of `Restricted`.
+///
+/// Returns `true` if any legacy shape was patched, so the caller can mark
+/// the server as pre-pagination (belt-and-suspenders alongside the
+/// runtime `-32601` probe).
+fn normalize_legacy_permission_profile_fields(value: &mut serde_json::Value) -> bool {
+    let mut found_legacy = false;
+    visit_permission_profile_fields(value, &mut found_legacy);
+    found_legacy
+}
+
+fn visit_permission_profile_fields(value: &mut serde_json::Value, found_legacy: &mut bool) {
+    match value {
+        serde_json::Value::Object(map) => {
+            if let Some(profile) = map.get_mut("permissionProfile")
+                && upgrade_legacy_permission_profile(profile)
+            {
+                *found_legacy = true;
+            }
+            for child in map.values_mut() {
+                visit_permission_profile_fields(child, found_legacy);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for child in items {
+                visit_permission_profile_fields(child, found_legacy);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// If `profile` looks like the legacy v0.124 `PermissionProfile` struct
+/// shape (object with no `type` discriminator), upgrade it in-place to the
+/// v0.125 `Managed` variant. Returns true when an upgrade occurred.
+fn upgrade_legacy_permission_profile(profile: &mut serde_json::Value) -> bool {
+    let Some(map) = profile.as_object_mut() else {
+        return false;
+    };
+    if map.contains_key("type") {
+        return false;
+    }
+    // Legacy shape: `{ "fileSystem": {...}, "network": {...} }`.
+    // v0.125 equivalent is `Managed { network, fileSystem }`.
+    if let Some(file_system) = map.get_mut("fileSystem") {
+        upgrade_legacy_file_system_permissions(file_system);
+    }
+    // `PermissionProfileNetworkPermissions.enabled` tightened from
+    // Option<bool> to bool in v0.125. Defensive: if a legacy server ever
+    // sent an explicit `null`, coerce to `false`.
+    if let Some(network) = map.get_mut("network")
+        && let Some(network_map) = network.as_object_mut()
+        && network_map.get("enabled").is_some_and(|v| v.is_null())
+    {
+        network_map.insert("enabled".to_string(), serde_json::Value::Bool(false));
+    }
+    map.insert(
+        "type".to_string(),
+        serde_json::Value::String("managed".to_string()),
+    );
+    true
+}
+
+/// Legacy `fileSystem` payloads always used the equivalent of the new
+/// `Restricted { entries, glob_scan_max_depth? }` variant (no `type`).
+fn upgrade_legacy_file_system_permissions(value: &mut serde_json::Value) {
+    let Some(map) = value.as_object_mut() else {
+        return;
+    };
+    if map.contains_key("type") {
+        return;
+    }
+    map.insert(
+        "type".to_string(),
+        serde_json::Value::String("restricted".to_string()),
+    );
+}
+
+fn response_deserialization_base(value: &serde_json::Value) -> Option<PathBuf> {
+    match value {
+        serde_json::Value::Object(map) => absolute_path_from_value(map.get("cwd"))
+            .or_else(|| map.get("thread").and_then(response_deserialization_base)),
+        _ => None,
+    }
+}
+
+fn normalize_relative_absolute_path_fields(
+    value: &mut serde_json::Value,
+    inherited_base: Option<&Path>,
+) {
+    match value {
+        serde_json::Value::Object(map) => {
+            normalize_relative_string_field(map, "cwd", inherited_base);
+            let local_base = absolute_path_from_value(map.get("cwd"))
+                .or_else(|| inherited_base.map(Path::to_path_buf));
+
+            if let Some(base_path) = local_base.as_deref() {
+                normalize_relative_string_array_field(map, "instructionSources", base_path);
+                normalize_relative_string_array_field(map, "readableRoots", base_path);
+                normalize_relative_string_array_field(map, "writableRoots", base_path);
+                normalize_relative_string_field(map, "agentPath", Some(base_path));
+                normalize_relative_string_field(map, "destinationPath", Some(base_path));
+                normalize_relative_string_field(map, "marketplacePath", Some(base_path));
+                normalize_relative_string_field(map, "movePath", Some(base_path));
+                normalize_relative_string_field(map, "savedPath", Some(base_path));
+                normalize_relative_string_field(map, "sourcePath", Some(base_path));
+
+                match object_type(map) {
+                    Some("imageView") | Some("read") => {
+                        normalize_relative_string_field(map, "path", Some(base_path));
+                    }
+                    _ => {}
+                }
+            }
+
+            let next_base = local_base.as_deref();
+            for child in map.values_mut() {
+                normalize_relative_absolute_path_fields(child, next_base);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for child in items {
+                normalize_relative_absolute_path_fields(child, inherited_base);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn normalize_relative_string_field(
+    map: &mut serde_json::Map<String, serde_json::Value>,
+    key: &str,
+    base_path: Option<&Path>,
+) {
+    let Some(base_path) = base_path else {
+        return;
+    };
+    let Some(serde_json::Value::String(text)) = map.get_mut(key) else {
+        return;
+    };
+    if looks_cross_platform_absolute(text) {
+        return;
+    }
+
+    *text = absolutize_relative_text(text, base_path);
+}
+
+fn normalize_relative_string_array_field(
+    map: &mut serde_json::Map<String, serde_json::Value>,
+    key: &str,
+    base_path: &Path,
+) {
+    let Some(serde_json::Value::Array(items)) = map.get_mut(key) else {
+        return;
+    };
+    for item in items {
+        let serde_json::Value::String(text) = item else {
+            continue;
+        };
+        if looks_cross_platform_absolute(text) {
+            continue;
+        }
+
+        *text = absolutize_relative_text(text, base_path);
+    }
+}
+
+fn absolutize_relative_text(text: &str, base_path: &Path) -> String {
+    AbsolutePathBuf::resolve_path_against_base(text, base_path)
+        .to_string_lossy()
+        .into_owned()
+}
+
+fn absolute_path_from_value(value: Option<&serde_json::Value>) -> Option<PathBuf> {
+    let serde_json::Value::String(text) = value? else {
+        return None;
+    };
+    if looks_cross_platform_absolute(text) {
+        Some(PathBuf::from(text))
+    } else {
+        None
+    }
+}
+
+fn object_type(map: &serde_json::Map<String, serde_json::Value>) -> Option<&str> {
+    match map.get("type") {
+        Some(serde_json::Value::String(tag)) => Some(tag.as_str()),
+        _ => None,
+    }
+}
+
+fn format_typed_rpc_deserialization_error(
+    wire_method: &str,
+    error: &serde_json::Error,
+    value: &serde_json::Value,
+) -> String {
+    let mut message = format!("deserialize typed RPC response: {error}");
+    if error
+        .to_string()
+        .contains("AbsolutePathBuf deserialized without a base path")
+    {
+        let suspects = suspicious_relative_path_entries(value);
+        if !suspects.is_empty() {
+            message.push_str("; suspicious relative path fields: ");
+            message.push_str(&suspects.join(", "));
+        } else {
+            message.push_str("; no relative values found in known path fields");
+        }
+    }
+    format!("{message} [method={wire_method}]")
+}
+
+fn suspicious_relative_path_entries(value: &serde_json::Value) -> Vec<String> {
+    let mut entries = Vec::new();
+    collect_relative_path_entries(value, "$", None, &mut entries);
+    entries
+}
+
+fn collect_relative_path_entries(
+    value: &serde_json::Value,
+    path: &str,
+    active_field: Option<&str>,
+    entries: &mut Vec<String>,
+) {
+    match value {
+        serde_json::Value::Object(map) => {
+            for (key, child) in map {
+                let next_path = format!("{path}.{key}");
+                let next_active_field = if is_path_field_key(key) {
+                    Some(key.as_str())
+                } else {
+                    None
+                };
+                collect_relative_path_entries(child, &next_path, next_active_field, entries);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for (index, child) in items.iter().enumerate() {
+                let next_path = format!("{path}[{index}]");
+                collect_relative_path_entries(child, &next_path, active_field, entries);
+            }
+        }
+        serde_json::Value::String(text) => {
+            if active_field.is_some() && !looks_cross_platform_absolute(text) {
+                entries.push(format!("{path}={text:?}"));
+            }
+        }
+        _ => {}
+    }
+}
+
+fn is_path_field_key(key: &str) -> bool {
+    PATH_FIELD_KEYS.contains(&key)
+}
+
+fn looks_cross_platform_absolute(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    if bytes.starts_with(b"/") || bytes.starts_with(b"\\\\") {
+        return true;
+    }
+    bytes.len() >= 3
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && (bytes[2] == b'\\' || bytes[2] == b'/')
+}
+
+fn note_notification_runtime(
+    app_store: &AppStoreReducer,
+    server_id: &str,
+    runtime_kind: AgentRuntimeKind,
+    notification: &upstream::ServerNotification,
+) {
+    let Some(thread_id) = notification_thread_id(notification) else {
+        return;
+    };
+    let key = ThreadKey {
+        server_id: server_id.to_string(),
+        thread_id,
+    };
+    app_store.set_thread_agent_runtime(&key, runtime_kind);
+}
+
+fn notification_thread_id(notification: &upstream::ServerNotification) -> Option<String> {
+    let value = serde_json::to_value(notification).ok()?;
+    find_thread_id_value(&value)
+}
+
+fn find_thread_id_value(value: &serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::Object(map) => {
+            for key in ["threadId", "thread_id"] {
+                if let Some(raw) = map.get(key).and_then(serde_json::Value::as_str)
+                    && !raw.trim().is_empty()
+                {
+                    return Some(raw.to_string());
+                }
+            }
+            if let Some(thread) = map.get("thread")
+                && let Some(id) = thread.get("id").and_then(serde_json::Value::as_str)
+                && !id.trim().is_empty()
+            {
+                return Some(id.to_string());
+            }
+            map.values().find_map(find_thread_id_value)
+        }
+        serde_json::Value::Array(values) => values.iter().find_map(find_thread_id_value),
+        _ => None,
+    }
+}
+
+fn client_request_wire_method(request: &upstream::ClientRequest) -> &'static str {
+    match request {
+        upstream::ClientRequest::GetAccount { .. } => "account/read",
+        upstream::ClientRequest::GetAccountRateLimits { .. } => "account/rateLimits/read",
+        upstream::ClientRequest::ModelList { .. } => "model/list",
+        upstream::ClientRequest::LoginAccount { .. } => "account/login/start",
+        upstream::ClientRequest::CancelLoginAccount { .. } => "account/login/cancel",
+        upstream::ClientRequest::LogoutAccount { .. } => "account/logout",
+        upstream::ClientRequest::ThreadList { .. } => "thread/list",
+        upstream::ClientRequest::ThreadStart { .. } => "thread/start",
+        upstream::ClientRequest::ThreadRead { .. } => "thread/read",
+        upstream::ClientRequest::ThreadResume { .. } => "thread/resume",
+        upstream::ClientRequest::ThreadFork { .. } => "thread/fork",
+        upstream::ClientRequest::ThreadRollback { .. } => "thread/rollback",
+        upstream::ClientRequest::ThreadTurnsList { .. } => "thread/turns/list",
+        upstream::ClientRequest::TurnStart { .. } => "turn/start",
+        upstream::ClientRequest::TurnSteer { .. } => "turn/steer",
+        upstream::ClientRequest::CollaborationModeList { .. } => "collaboration_mode/list",
+        _ => "unknown",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use codex_app_server_protocol::{
+        CommandAction, CommandExecutionSource, CommandExecutionStatus, ThreadItem,
+    };
+    use serde::Deserialize;
+    use serde::de::Error as _;
+    use serde_json::json;
+
+    #[test]
+    fn suspicious_relative_path_entries_reports_relative_values_in_known_path_fields() {
+        let payload = json!({
+            "cwd": "/private/var/mobile/home/codex",
+            "instructionSources": [
+                "AGENTS.md",
+                "/private/var/mobile/home/codex/AGENTS.md"
+            ],
+            "sandbox": {
+                "type": "workspaceWrite",
+                "writableRoots": ["relative-root", "/private/var/mobile/home/codex"]
+            },
+            "thread": {
+                "cwd": "/private/var/mobile/home/codex",
+                "path": "threads/thread-123.json"
+            }
+        });
+
+        let entries = suspicious_relative_path_entries(&payload);
+
+        assert_eq!(
+            entries,
+            vec![
+                "$.instructionSources[0]=\"AGENTS.md\"",
+                "$.sandbox.writableRoots[0]=\"relative-root\"",
+                "$.thread.path=\"threads/thread-123.json\"",
+            ]
+        );
+    }
+
+    #[test]
+    fn format_typed_rpc_deserialization_error_appends_relative_path_diagnostics() {
+        let payload = json!({
+            "instructionSources": ["AGENTS.md"]
+        });
+        let synthetic = serde_json::Error::custom(
+            "AbsolutePathBuf deserialized without a base path at line 1 column 2",
+        );
+        let message = format_typed_rpc_deserialization_error("thread/start", &synthetic, &payload);
+
+        assert!(
+            message.contains("$.instructionSources[0]=\"AGENTS.md\""),
+            "{message}"
+        );
+        assert!(message.contains("[method=thread/start]"), "{message}");
+    }
+
+    #[derive(Debug, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct InstructionSourcesEnvelope {
+        cwd: AbsolutePathBuf,
+        instruction_sources: Vec<AbsolutePathBuf>,
+    }
+
+    #[test]
+    fn deserialize_typed_response_resolves_instruction_sources_against_response_cwd() {
+        let payload = json!({
+            "cwd": "/private/var/mobile/home/codex",
+            "instructionSources": ["AGENTS.md"]
+        });
+
+        let parsed: InstructionSourcesEnvelope =
+            deserialize_typed_response(&payload).expect("payload should deserialize");
+
+        assert_eq!(
+            parsed.cwd.as_path(),
+            Path::new("/private/var/mobile/home/codex")
+        );
+        assert_eq!(
+            parsed.instruction_sources[0].as_path(),
+            Path::new("/private/var/mobile/home/codex/AGENTS.md")
+        );
+    }
+
+    #[test]
+    fn deserialize_typed_response_accepts_empty_thread_list_cwd() {
+        let payload = json!({
+            "data": [{
+                "id": "thread-1",
+                "preview": "hello",
+                "ephemeral": false,
+                "modelProvider": "anthropic",
+                "createdAt": 1_777_345_792,
+                "updatedAt": 1_777_345_792,
+                "status": { "type": "notLoaded" },
+                "path": "/Users/sigkitten/.claude/projects/-tmp/thread-1.jsonl",
+                "cwd": "",
+                "cliVersion": "alleycat-claude-bridge/0.1.0",
+                "source": "appServer",
+                "turns": []
+            }],
+            "nextCursor": null,
+            "backwardsCursor": null
+        });
+
+        let parsed: upstream::ThreadListResponse =
+            deserialize_typed_response(&payload).expect("thread/list should deserialize");
+
+        assert_eq!(parsed.data[0].cwd.as_path(), Path::new("/"));
+    }
+
+    #[test]
+    fn deserialize_typed_response_accepts_bare_thread_status_string() {
+        // Older alleycat-opencode-bridge releases shipped `status` as a
+        // bare string instead of the tagged form upstream `ThreadStatus`
+        // expects. Without this normalization the typed deserializer
+        // rejects the entire `thread/list` page and OpenCode threads
+        // never appear in the sidebar.
+        let payload = json!({
+            "data": [{
+                "id": "thread-1",
+                "preview": "hello",
+                "ephemeral": false,
+                "modelProvider": "opencode",
+                "createdAt": 1_777_345_792,
+                "updatedAt": 1_777_345_792,
+                "status": "notLoaded",
+                "path": null,
+                "cwd": "/Users/sigkitten/dev/health",
+                "cliVersion": "alleycat-opencode-bridge/0.1.0",
+                "source": "appServer",
+                "gitInfo": null,
+                "name": "Greeting",
+                "turns": []
+            }],
+            "nextCursor": null,
+            "backwardsCursor": null
+        });
+
+        let parsed: upstream::ThreadListResponse =
+            deserialize_typed_response(&payload).expect("thread/list should deserialize");
+
+        assert_eq!(parsed.data.len(), 1);
+        assert!(matches!(
+            parsed.data[0].status,
+            upstream::ThreadStatus::NotLoaded
+        ));
+    }
+
+    #[test]
+    fn deserialize_typed_response_accepts_default_service_tier_alias() {
+        let payload = json!({
+            "model": "",
+            "modelProvider": "anthropic",
+            "serviceTier": "default",
+            "approvalPolicy": "on-request",
+            "approvalsReviewer": "user",
+            "sandbox": { "type": "workspaceWrite" },
+            "permissionProfile": { "type": "disabled" },
+            "cwd": "/tmp",
+            "instructionSources": [],
+            "reasoningEffort": "high",
+            "thread": {
+                "id": "thread-1",
+                "preview": "hello",
+                "ephemeral": false,
+                "modelProvider": "anthropic",
+                "createdAt": 1,
+                "updatedAt": 2,
+                "status": { "type": "notLoaded" },
+                "path": "/tmp/thread.jsonl",
+                "cwd": "/tmp",
+                "cliVersion": "alleycat-claude-bridge/0.1.0",
+                "source": "appServer",
+                "agentNickname": null,
+                "agentRole": null,
+                "gitInfo": null,
+                "name": null,
+                "turns": []
+            }
+        });
+
+        let parsed: upstream::ThreadResumeResponse =
+            deserialize_typed_response(&payload).expect("thread/resume should deserialize");
+
+        assert_eq!(parsed.service_tier, None);
+    }
+
+    #[test]
+    fn deserialize_typed_response_accepts_claude_dynamic_tool_text_alias() {
+        let payload = json!({
+            "data": [{
+                "id": "turn-1",
+                "items": [
+                    {
+                        "id": "user-1",
+                        "type": "userMessage",
+                        "content": [{
+                            "type": "text",
+                            "text": "hello",
+                            "textElements": []
+                        }]
+                    },
+                    {
+                        "id": "tool-1",
+                        "type": "dynamicToolCall",
+                        "namespace": "claude",
+                        "tool": "Read",
+                        "arguments": {},
+                        "status": "completed",
+                        "contentItems": [{
+                            "type": "text",
+                            "text": "tool output"
+                        }, {
+                            "type": "text",
+                            "file": {
+                                "content": "file output",
+                                "filePath": "/tmp/file.txt"
+                            }
+                        }, {
+                            "text": "untagged output"
+                        }, {
+                            "task": {
+                                "id": "1",
+                                "subject": "structured output"
+                            }
+                        }],
+                        "success": true,
+                        "durationMs": 1
+                    }
+                ],
+                "status": "completed",
+                "error": null,
+                "startedAt": null,
+                "completedAt": 1,
+                "durationMs": 1
+            }],
+            "nextCursor": null,
+            "backwardsCursor": null
+        });
+
+        let parsed: upstream::ThreadTurnsListResponse =
+            deserialize_typed_response(&payload).expect("thread turns should deserialize");
+
+        let upstream::ThreadItem::UserMessage { content, .. } = &parsed.data[0].items[0] else {
+            panic!("expected user message");
+        };
+        assert!(matches!(
+            &content[0],
+            upstream::UserInput::Text { text, .. } if text == "hello"
+        ));
+
+        let upstream::ThreadItem::DynamicToolCall { content_items, .. } = &parsed.data[0].items[1]
+        else {
+            panic!("expected dynamic tool call");
+        };
+        let content_items = content_items.as_ref().expect("content items");
+        assert!(matches!(
+            &content_items[0],
+            codex_app_server_protocol::DynamicToolCallOutputContentItem::InputText { text }
+                if text == "tool output"
+        ));
+        assert!(matches!(
+            &content_items[1],
+            codex_app_server_protocol::DynamicToolCallOutputContentItem::InputText { text }
+                if text == "file output"
+        ));
+        assert!(matches!(
+            &content_items[2],
+            codex_app_server_protocol::DynamicToolCallOutputContentItem::InputText { text }
+                if text == "untagged output"
+        ));
+        assert!(matches!(
+            &content_items[3],
+            codex_app_server_protocol::DynamicToolCallOutputContentItem::InputText { text }
+                if text.contains("structured output")
+        ));
+    }
+
+    #[test]
+    fn deserialize_typed_response_accepts_compact_bridge_command_actions() {
+        let payload = json!({
+            "data": [{
+                "id": "turn-1",
+                "items": [{
+                    "id": "tool-1",
+                    "type": "commandExecution",
+                    "command": "read .pi-tool-demo.txt",
+                    "cwd": "/tmp/project",
+                    "processId": null,
+                    "source": "agent",
+                    "status": "completed",
+                    "commandActions": [{
+                        "type": "read",
+                        "path": ".pi-tool-demo.txt"
+                    }, {
+                        "type": "list_files",
+                        "path": "src"
+                    }],
+                    "aggregatedOutput": "demo line\n",
+                    "exitCode": null,
+                    "durationMs": null
+                }],
+                "status": "completed",
+                "error": null,
+                "startedAt": null,
+                "completedAt": 1,
+                "durationMs": 1
+            }],
+            "nextCursor": null,
+            "backwardsCursor": null
+        });
+
+        let parsed: upstream::ThreadTurnsListResponse =
+            deserialize_typed_response(&payload).expect("thread turns should deserialize");
+        let upstream::ThreadItem::CommandExecution {
+            command_actions, ..
+        } = &parsed.data[0].items[0]
+        else {
+            panic!("expected command execution");
+        };
+
+        assert!(matches!(
+            &command_actions[0],
+            upstream::CommandAction::Read {
+                command,
+                name,
+                path
+            } if command == "read .pi-tool-demo.txt"
+                && name == ".pi-tool-demo.txt"
+                && path.as_path() == Path::new("/tmp/project/.pi-tool-demo.txt")
+        ));
+        assert!(matches!(
+            &command_actions[1],
+            upstream::CommandAction::ListFiles { command, path }
+                if command == "read .pi-tool-demo.txt" && path.as_deref() == Some("src")
+        ));
+    }
+
+    #[test]
+    fn deserialize_typed_response_accepts_legacy_opencode_tool_shapes() {
+        let payload: serde_json::Value = serde_json::from_str(
+            r#"{
+                "model": "opencode",
+                "modelProvider": "opencode",
+                "serviceTier": "default",
+                "approvalPolicy": "on-request",
+                "approvalsReviewer": "user",
+                "sandbox": { "type": "dangerFullAccess" },
+                "permissionProfile": { "type": "disabled" },
+                "cwd": "/repo",
+                "instructionSources": [],
+                "reasoningEffort": "high",
+                "thread": {
+                    "id": "thread-1",
+                    "preview": "hello",
+                    "ephemeral": false,
+                    "modelProvider": "opencode",
+                    "createdAt": 1,
+                    "updatedAt": 2,
+                    "status": { "type": "notLoaded" },
+                    "path": "/tmp/thread.jsonl",
+                    "cwd": "/repo",
+                    "cliVersion": "alleycat-opencode-bridge/0.1.0",
+                    "source": "appServer",
+                    "agentNickname": null,
+                    "agentRole": null,
+                    "gitInfo": null,
+                    "name": null,
+                    "turns": [{
+                        "id": "turn-1",
+                        "items": [{
+                            "id": "cmd-1",
+                            "type": "commandExecution",
+                            "command": "read src/lib.rs",
+                            "cwd": null,
+                            "status": "error",
+                            "commandActions": [{"type": "read", "path": "src/lib.rs"}],
+                            "aggregatedOutput": "missing"
+                        }, {
+                            "id": "fc-1",
+                            "type": "fileChange",
+                            "changes": [],
+                            "status": "error"
+                        }, {
+                            "id": "mcp-1",
+                            "type": "mcpToolCall",
+                            "server": "github",
+                            "tool": "create_issue",
+                            "status": "error",
+                            "arguments": {},
+                            "error": {"message": "bad token"}
+                        }, {
+                            "id": "dyn-1",
+                            "type": "dynamicToolCall",
+                            "tool": "webfetch",
+                            "arguments": {},
+                            "status": "running",
+                            "contentItems": [{"text": "loading"}]
+                        }, {
+                            "id": "agent-1",
+                            "type": "collabAgentToolCall",
+                            "tool": "spawnAgent",
+                            "status": "running",
+                            "senderThreadId": "thread-1",
+                            "receiverThreadIds": ["ses_child"],
+                            "agentsStates": {"ses_child": {"status": "error"}}
+                        }],
+                        "status": "completed",
+                        "error": null,
+                        "startedAt": 1,
+                        "completedAt": 2,
+                        "durationMs": 1
+                    }]
+                }
+            }"#,
+        )
+        .expect("legacy opencode fixture should be valid JSON");
+
+        let parsed: upstream::ThreadResumeResponse = deserialize_typed_response(&payload)
+            .expect("legacy opencode payload should deserialize");
+        let items = &parsed.thread.turns[0].items;
+        assert!(matches!(
+            &items[0],
+            upstream::ThreadItem::CommandExecution {
+                cwd,
+                status: upstream::CommandExecutionStatus::Failed,
+                command_actions,
+                ..
+            } if cwd.as_path() == Path::new("/repo")
+                && matches!(
+                    &command_actions[0],
+                    upstream::CommandAction::Read { path, .. }
+                        if path.as_path() == Path::new("/repo/src/lib.rs")
+                )
+        ));
+        assert!(matches!(
+            &items[1],
+            upstream::ThreadItem::FileChange {
+                status: upstream::PatchApplyStatus::Failed,
+                ..
+            }
+        ));
+        assert!(matches!(
+            &items[2],
+            upstream::ThreadItem::McpToolCall {
+                status: upstream::McpToolCallStatus::Failed,
+                ..
+            }
+        ));
+        assert!(matches!(
+            &items[3],
+            upstream::ThreadItem::DynamicToolCall {
+                status: upstream::DynamicToolCallStatus::InProgress,
+                content_items: Some(content_items),
+                ..
+            } if matches!(
+                &content_items[0],
+                upstream::DynamicToolCallOutputContentItem::InputText { text }
+                    if text == "loading"
+            )
+        ));
+        assert!(matches!(
+            &items[4],
+            upstream::ThreadItem::CollabAgentToolCall {
+                status: upstream::CollabAgentToolCallStatus::InProgress,
+                agents_states,
+                ..
+            } if matches!(
+                agents_states.get("ses_child").map(|state| &state.status),
+                Some(upstream::CollabAgentStatus::Errored)
+            )
+        ));
+    }
+
+    #[test]
+    fn deserialize_typed_response_resolves_read_action_paths_against_command_cwd() {
+        let command_item = ThreadItem::CommandExecution {
+            id: "cmd-1".into(),
+            command: "cat crates/krusty-cli/src/main.rs".into(),
+            cwd: AbsolutePathBuf::from_absolute_path("/repo").expect("absolute cwd"),
+            process_id: None,
+            source: CommandExecutionSource::Agent,
+            status: CommandExecutionStatus::Completed,
+            command_actions: vec![CommandAction::Read {
+                command: "cat crates/krusty-cli/src/main.rs".into(),
+                name: "main.rs".into(),
+                path: AbsolutePathBuf::from_absolute_path("/repo/crates/krusty-cli/src/main.rs")
+                    .expect("absolute read path"),
+            }],
+            aggregated_output: None,
+            exit_code: Some(0),
+            duration_ms: Some(1),
+        };
+        let mut payload = serde_json::to_value(command_item).expect("serialize command item");
+        payload["commandActions"][0]["path"] = json!("crates/krusty-cli/src/main.rs");
+
+        let parsed: ThreadItem =
+            deserialize_typed_response(&payload).expect("payload should deserialize");
+        let ThreadItem::CommandExecution {
+            cwd,
+            command_actions,
+            ..
+        } = parsed
+        else {
+            panic!("expected command execution item");
+        };
+        let CommandAction::Read { path, .. } = &command_actions[0] else {
+            panic!("expected read command action");
+        };
+
+        assert_eq!(cwd.as_path(), Path::new("/repo"));
+        assert_eq!(
+            path.as_path(),
+            Path::new("/repo/crates/krusty-cli/src/main.rs")
+        );
+    }
+
+    /// A v0.125+ server already emits the tagged-enum shape. Normalization
+    /// should be a no-op and the legacy flag must stay false.
+    #[test]
+    fn permission_profile_v125_tagged_shape_is_no_op() {
+        let mut payload = json!({
+            "permissionProfile": {
+                "type": "managed",
+                "network": { "enabled": true },
+                "fileSystem": { "type": "restricted", "entries": [] }
+            }
+        });
+        let legacy = normalize_legacy_permission_profile_fields(&mut payload);
+        assert!(!legacy);
+        assert_eq!(
+            payload["permissionProfile"]["type"].as_str(),
+            Some("managed")
+        );
+        assert_eq!(
+            payload["permissionProfile"]["fileSystem"]["type"].as_str(),
+            Some("restricted")
+        );
+    }
+
+    /// Exact legacy shape from the v0.124 device-console log — no `type`
+    /// discriminator on `permissionProfile` or its inner `fileSystem`.
+    /// Normalization should upgrade both to the new tagged shapes and the
+    /// legacy flag must be true so the caller can flip
+    /// `supports_turn_pagination = false`.
+    #[test]
+    fn permission_profile_v124_legacy_shape_is_upgraded() {
+        let mut payload = json!({
+            "permissionProfile": {
+                "fileSystem": {
+                    "entries": [
+                        { "access": "write", "path": { "type": "special", "value": { "kind": "root" } } }
+                    ]
+                },
+                "network": { "enabled": true }
+            }
+        });
+        let legacy = normalize_legacy_permission_profile_fields(&mut payload);
+        assert!(legacy);
+        assert_eq!(
+            payload["permissionProfile"]["type"].as_str(),
+            Some("managed")
+        );
+        assert_eq!(
+            payload["permissionProfile"]["fileSystem"]["type"].as_str(),
+            Some("restricted")
+        );
+        // Entries array preserved unchanged.
+        assert_eq!(
+            payload["permissionProfile"]["fileSystem"]["entries"]
+                .as_array()
+                .map(Vec::len),
+            Some(1)
+        );
+    }
+
+    /// A legacy-shape `permissionProfile` nested under a response object
+    /// (e.g. inside the top level of ThreadResumeResponse) still gets
+    /// upgraded — the walker recurses through all nested objects.
+    #[test]
+    fn permission_profile_legacy_shape_upgraded_in_nested_response() {
+        let mut payload = json!({
+            "thread": { "cliVersion": "0.124.0" },
+            "permissionProfile": {
+                "fileSystem": { "entries": [] },
+                "network": { "enabled": false }
+            }
+        });
+        assert!(normalize_legacy_permission_profile_fields(&mut payload));
+        assert_eq!(
+            payload["permissionProfile"]["type"].as_str(),
+            Some("managed")
+        );
+    }
+
+    /// A legacy network.enabled=null must coerce to false so deserialization
+    /// into the v0.125 `PermissionProfileNetworkPermissions.enabled: bool`
+    /// succeeds.
+    #[test]
+    fn permission_profile_network_enabled_null_coerces_to_false() {
+        let mut payload = json!({
+            "permissionProfile": {
+                "fileSystem": { "entries": [] },
+                "network": { "enabled": null }
+            }
+        });
+        assert!(normalize_legacy_permission_profile_fields(&mut payload));
+        assert_eq!(
+            payload["permissionProfile"]["network"]["enabled"],
+            json!(false)
+        );
+    }
+
+    /// Payloads without any `permissionProfile` (e.g. thread/list) must
+    /// pass through unchanged, legacy flag false.
+    #[test]
+    fn payload_without_permission_profile_is_untouched() {
+        let mut payload = json!({ "data": [{"id": "t1"}], "nextCursor": null });
+        let legacy = normalize_legacy_permission_profile_fields(&mut payload);
+        assert!(!legacy);
+        assert_eq!(payload["data"][0]["id"].as_str(), Some("t1"));
+    }
+
+    /// Full end-to-end: a legacy ThreadResumeResponse payload (minimal
+    /// fields) deserializes successfully into `upstream::ThreadResumeResponse`
+    /// via `deserialize_typed_response_with_legacy_flag`.
+    #[test]
+    fn legacy_thread_resume_response_deserializes_with_flag() {
+        let payload = json!({
+            "model": "gpt-5",
+            "modelProvider": "openai",
+            "serviceTier": "fast",
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "sandbox": { "type": "dangerFullAccess" },
+            "cwd": "/tmp",
+            "instructionSources": [],
+            "reasoningEffort": "medium",
+            "permissionProfile": {
+                "fileSystem": { "entries": [] },
+                "network": { "enabled": true }
+            },
+            "thread": {
+                "id": "019da728-02a9-74a1-8dc6-ef71c5c111d8",
+                "preview": "hello",
+                "ephemeral": false,
+                "modelProvider": "openai",
+                "createdAt": 1,
+                "updatedAt": 2,
+                "status": { "type": "idle" },
+                "path": "/tmp/thread.jsonl",
+                "cwd": "/tmp",
+                "cliVersion": "0.124.0",
+                "source": "cli",
+                "agentNickname": null,
+                "agentRole": null,
+                "gitInfo": null,
+                "name": "Thread",
+                "turns": []
+            }
+        });
+        let (parsed, legacy) =
+            deserialize_typed_response_with_legacy_flag::<upstream::ThreadResumeResponse>(&payload);
+        assert!(legacy, "legacy flag should fire on v0.124 payload");
+        let response = parsed.expect("legacy payload should deserialize");
+        // Upstream replaced `permissionProfile` with `activePermissionProfile`;
+        // legacy compat only needs to confirm the response decodes.
+        let _ = response.active_permission_profile;
+    }
+}

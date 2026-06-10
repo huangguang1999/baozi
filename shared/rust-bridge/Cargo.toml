@@ -1,0 +1,94 @@
+[workspace]
+members = [
+    "codex-bridge",
+    "codex-debug-cli",
+    "codex-ipc",
+    "codex-slingshot",
+    "codex-mobile-client",
+    "uniffi-bindgen",
+    "codex-tui",
+]
+resolver = "3"
+
+[workspace.dependencies]
+codex-app-server = { path = "../third_party/codex/codex-rs/app-server" }
+codex-app-server-client = { path = "../third_party/codex/codex-rs/app-server-client" }
+codex-app-server-protocol = { path = "../third_party/codex/codex-rs/app-server-protocol" }
+codex-protocol = { path = "../third_party/codex/codex-rs/protocol" }
+codex-utils-cli = { path = "../third_party/codex/codex-rs/utils/cli" }
+codex-core = { path = "../third_party/codex/codex-rs/core" }
+codex-exec-server = { path = "../third_party/codex/codex-rs/exec-server" }
+codex-login = { path = "../third_party/codex/codex-rs/login" }
+codex-shell-command = { path = "../third_party/codex/codex-rs/shell-command" }
+codex-apply-patch = { path = "../third_party/codex/codex-rs/apply-patch" }
+codex-arg0 = { path = "../third_party/codex/codex-rs/arg0" }
+codex-feedback = { path = "../third_party/codex/codex-rs/feedback" }
+codex-cloud-requirements = { path = "../third_party/codex/codex-rs/cloud-requirements" }
+codex-config = { path = "../third_party/codex/codex-rs/config" }
+codex-utils-absolute-path = { path = "../third_party/codex/codex-rs/utils/absolute-path" }
+codex-git-utils = { path = "../third_party/codex/codex-rs/git-utils" }
+alleycat-bridge-core = { git = "https://github.com/huangguang1999/alleycat.git", rev = "3c6dfe2c6b060864d8cb0fcae58f73a6ed1ea10f" }
+alleycat-pi-bridge = { git = "https://github.com/huangguang1999/alleycat.git", rev = "3c6dfe2c6b060864d8cb0fcae58f73a6ed1ea10f" }
+alleycat-claude-bridge = { git = "https://github.com/huangguang1999/alleycat.git", rev = "3c6dfe2c6b060864d8cb0fcae58f73a6ed1ea10f" }
+alleycat-opencode-bridge = { git = "https://github.com/huangguang1999/alleycat.git", rev = "3c6dfe2c6b060864d8cb0fcae58f73a6ed1ea10f" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "io-util"] }
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-native-roots"] }
+thiserror = "2"
+tracing = "0.1"
+async-trait = "0.1"
+lru = "0.12"
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1"
+base64 = "0.22"
+sha2 = "0.10"
+p256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+russh = "0.60.1"
+russh-keys = "0.49.2"
+futures = "0.3"
+url = "2.5"
+uuid = { version = "1", features = ["v4", "serde"] }
+reqwest = { version = "0.12", default-features = false, features = ["http2", "json", "rustls-tls", "stream"] }
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
+shlex = "1"
+
+[profile.release]
+strip = true
+lto = "fat"
+opt-level = "z"
+codegen-units = 1
+panic = "abort"
+
+# Used by the iOS fast lanes (`--fast-device`, `--fast-sim`).
+# `debug = 1` emits line tables only — crashes still resolve to file:line,
+# but the massive per-variable DWARF (which pushes the default `dev`
+# staticlib to ~2.7GB) is gone. Expect ~10× smaller libcodex_mobile_client.a
+# and a correspondingly faster Swift link step.
+[profile.ios-dev]
+inherits = "dev"
+debug = 1
+codegen-units = 256
+
+[profile.mobile-release]
+inherits = "release"
+lto = false
+strip = true
+debug = 0
+codegen-units = 16
+
+[profile.android-dev]
+inherits = "release"
+lto = false
+strip = true
+debug = 0
+codegen-units = 16
+
+[patch.crates-io]
+tokio-tungstenite = { git = "https://github.com/openai-oss-forks/tokio-tungstenite", rev = "132f5b39c862e3a970f731d709608b3e6276d5f6" }
+tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev = "9200079d3b54a1ff51072e24d81fd354f085156f" }
+crossterm = { git = "https://github.com/nornagon/crossterm", branch = "nornagon/color-query" }
+
+[patch."ssh://git@github.com/openai-oss-forks/tungstenite-rs.git"]
+tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev = "9200079d3b54a1ff51072e24d81fd354f085156f" }

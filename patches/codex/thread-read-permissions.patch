@@ -1,0 +1,42 @@
+diff --git a/codex-rs/app-server-protocol/src/protocol/v2/thread.rs b/codex-rs/app-server-protocol/src/protocol/v2/thread.rs
+index 458722b3a2..6a3a29ca7c 100644
+--- a/codex-rs/app-server-protocol/src/protocol/v2/thread.rs
++++ b/codex-rs/app-server-protocol/src/protocol/v2/thread.rs
+@@ -977,6 +977,10 @@ pub struct ThreadReadParams {
+ #[ts(export_to = "v2/")]
+ pub struct ThreadReadResponse {
+     pub thread: Thread,
++    #[serde(default)]
++    pub approval_policy: Option<AskForApproval>,
++    #[serde(default)]
++    pub sandbox: Option<SandboxPolicy>,
+ }
+ 
+ #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+diff --git a/codex-rs/app-server/src/request_processors/thread_processor.rs b/codex-rs/app-server/src/request_processors/thread_processor.rs
+index 615e37f2c9..fda8f7feb7 100644
+--- a/codex-rs/app-server/src/request_processors/thread_processor.rs
++++ b/codex-rs/app-server/src/request_processors/thread_processor.rs
+@@ -1905,7 +1905,21 @@ impl ThreadRequestProcessor {
+             .read_thread_view(thread_uuid, include_turns)
+             .await
+             .map_err(thread_read_view_error)?;
+-        Ok(ThreadReadResponse { thread })
++        let live_config_snapshot =
++            if let Ok(thread) = self.thread_manager.get_thread(thread_uuid).await {
++                Some(thread.config_snapshot().await)
++            } else {
++                None
++            };
++        Ok(ThreadReadResponse {
++            thread,
++            approval_policy: live_config_snapshot
++                .as_ref()
++                .map(|config| config.approval_policy.into()),
++            sandbox: live_config_snapshot
++                .as_ref()
++                .map(|config| config.sandbox_policy().into()),
++        })
+     }
+ 
+     /// Builds the API view for `thread/read` from persisted metadata plus optional live state.

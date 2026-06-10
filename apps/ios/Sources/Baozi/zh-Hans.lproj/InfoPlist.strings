@@ -1,0 +1,8 @@
+/* zh-Hans — auto-generated for litter-fork */
+"CFBundleName" = "包子";
+"NSBluetoothAlwaysUsageDescription" = "包子 使用 Bluetooth 检测你的 iPhone 何时靠近已配对的 Mac。";
+"NSCameraUsageDescription" = "包子 使用相机为对话拍摄照片。";
+"NSLocalNetworkUsageDescription" = "Codex 会发现你本地网络中的编程智能体和 SSH 服务器。";
+"NSMicrophoneUsageDescription" = "包子 使用麦克风进行语音转文字输入。";
+"NSNearbyInteractionUsageDescription" = "包子 使用 Nearby Interaction 在配对前确认你的 iPhone 和 Mac 距离相近。";
+"CFBundleDisplayName" = "包子";

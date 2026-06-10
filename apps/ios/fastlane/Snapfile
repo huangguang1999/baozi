@@ -1,0 +1,16 @@
+project "Litter.xcodeproj"
+scheme "Litter"
+
+devices [
+  "iPhone 16 Pro Max",
+  "iPhone 16 Pro",
+]
+
+languages ["en-US"]
+
+output_directory "./fastlane/screenshots"
+clear_previous_screenshots true
+override_status_bar true
+
+only_testing ["LitterUITests/LitterUITests/testCaptureAppStoreScreenshots"]
+skip_testing ["LitterTests"]

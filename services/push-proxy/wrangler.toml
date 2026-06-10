@@ -1,0 +1,26 @@
+name = "baozi-push-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+workers_dev = true
+# [litter-fork] Author's custom domain removed; deploy on the free *.workers.dev
+# subdomain. The iOS client points its PushProxyClient.baseURL at that URL.
+
+[durable_objects]
+bindings = [
+  { name = "PUSH_REGISTRATION", class_name = "PushRegistration" },
+  { name = "RATE_LIMITER", class_name = "RateLimiter" },
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PushRegistration"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["RateLimiter"]
+
+[[kv_namespaces]]
+binding = "PUSH_KV"
+id = "a8adc3ba6afe48ff88e3b7a4fe059626"
+
+[vars]

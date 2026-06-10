@@ -1,0 +1,47 @@
+[workspace]
+# The baozi wrapper crate at services/kittylitter re-exports the alleycat
+# daemon under the `baozicli` npm package name (installed command: `baozi`).
+# cargo-dist runs against that workspace and produces baozicli artifacts
+# hosted on this repo's (huangguang1999/baozi) GitHub Releases.
+members = ["cargo:services/kittylitter"]
+
+[dist]
+cargo-dist-version = "0.31.0"
+ci = "github"
+# npm is the only distribution channel for now. Homebrew, shell installer,
+# powershell installer, and MSI can be re-enabled later by adding them back
+# to this list (and to publish-jobs for the registry-publishing ones).
+installers = ["npm"]
+targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu"]
+# Keep Windows on the native x64 GitHub runner for now. The aarch64 Windows
+# target still needs cargo-xwin/ring cross-compilation coverage before it can
+# be added safely.
+install-path = "CARGO_HOME"
+hosting = "github"
+install-updater = false
+# macOS signing DISABLED for the initial baozi release — no Developer ID
+# Application cert is wired into this fork's repo secrets yet. Unsigned means
+# users get a Gatekeeper "unidentified developer" prompt on first run and the
+# daemon's Local Network (TCC) permission is granted per-launch rather than
+# pinned to a stable signed identity. To enable later: set macos-sign = true
+# and add CODESIGN_CERTIFICATE / CODESIGN_CERTIFICATE_PASSWORD / CODESIGN_IDENTITY
+# (a "Developer ID Application" cert) to the huangguang1999/baozi repo secrets.
+macos-sign = false
+# NOTE: dnakov's sccache (Cloudflare R2) build accelerator was removed here —
+# it required SCCACHE_R2_* + AWS_* repo secrets this fork doesn't have, and CI
+# would fail without them. Releases recompile from scratch (slower but works).
+# Re-add `github-build-setup = "../dist-build-setup.yml"` only if you set up
+# your own sccache backend + secrets.
+# Run the npm publish job on tagged releases. The workflow uses npm trusted
+# publishing via GitHub OIDC, so it does not need NPM_TOKEN.
+publish-jobs = ["npm"]
+# release.yml has an intentional hand edit for npm trusted publishing until
+# cargo-dist can generate that shape itself.
+allow-dirty = ["ci"]
+# Add a `workflow_dispatch` trigger to release.yml so the auto-release
+# wrapper workflow can invoke it on demand (without us pushing a tag
+# manually). cargo-dist still creates the tag internally as part of the
+# release; we never run `git tag` ourselves.
+dispatch-releases = true
+# Open a PR with the generated workflow on changes rather than overwriting silently.
+pr-run-mode = "plan"

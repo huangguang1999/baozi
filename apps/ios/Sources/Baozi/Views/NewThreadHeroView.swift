@@ -171,10 +171,10 @@ struct NewThreadHeroView: View {
     /// is wired, swap the array contents and make tapping prefill the
     /// composer with the row's text.
     private static let placeholderSuggestions: [String] = [
-        "Make local iPhone command failures self-diagnosing",
-        "Fix the real home feed item cap",
-        "Fix subagent metadata across conversation rows",
-        "Connect your favorite apps to Codex"
+        "帮我重构这个函数并补上注释",
+        "这段报错是什么意思，该怎么修？",
+        "给这个模块写一套单元测试",
+        "优化一下这个页面的加载速度"
     ]
 
     private var suggestionsList: some View {

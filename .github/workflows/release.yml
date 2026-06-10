@@ -317,6 +317,8 @@ jobs:
             pkg=$(echo "$release" | jq '.artifacts[] | select(endswith("-npm-package.tar.gz"))' --raw-output)
             npm publish --access public "./npm/${pkg}"
           done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   announce:
     needs:

@@ -12,7 +12,7 @@
   <a href="https://github.com/huangguang1999/baozi"><img src="docs/badges/website.svg" alt="github.com/huangguang1999/baozi" /></a>
   &nbsp;
   &nbsp;
-  <a href="https://github.com/huangguang1999/baozi/android-beta"><img src="docs/badges/android-beta.svg" alt="Android Beta" /></a>
+  <a href="https://github.com/huangguang1999/baozi/releases/latest"><img src="docs/badges/android-beta.svg" alt="Android APK" /></a>
 </p>
 
 ## Screenshots (iOS)
@@ -23,6 +23,12 @@
   <img src="docs/screenshots/03-agents.png" alt="Codex · Claude · Grok 随你指挥" width="200" />
   <img src="docs/screenshots/04-privacy.png" alt="端到端加密" width="200" />
 </p>
+
+## Download
+
+- **iOS** — TestFlight / App Store (in review)
+- **Android** — [download the latest APK](https://github.com/huangguang1999/baozi/releases/latest) (arm64, direct install; enable "unknown sources"). Not on Google Play.
+- **Your computer** — run the daemon: `npx baozicli` (see below)
 
 ## Quick Start
 

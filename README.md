@@ -18,10 +18,10 @@
 ## Screenshots (iOS)
 
 <p align="center">
-  <img src="docs/screenshots/01-hero-iphone-1320x2868.png" alt="Home" width="200" />
-  <img src="docs/screenshots/02-remote-iphone-1320x2868.png" alt="Remote servers" width="200" />
-  <img src="docs/screenshots/07-generative-ui-iphone-1320x2868.png" alt="Generative UI" width="200" />
-  <img src="docs/screenshots/05-realtime-voice-iphone-1320x2868.png" alt="Realtime voice" width="200" />
+  <img src="docs/screenshots/01-home.png" alt="首页 — 包子" width="200" />
+  <img src="docs/screenshots/02-remote-control.png" alt="手机遥控 Mac 上的 AI 编程" width="200" />
+  <img src="docs/screenshots/03-agents.png" alt="Codex · Claude · Grok 随你指挥" width="200" />
+  <img src="docs/screenshots/04-privacy.png" alt="端到端加密" width="200" />
 </p>
 
 ## Quick Start

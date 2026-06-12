@@ -33,7 +33,7 @@ struct ConversationComposerExpandedView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 if inputText.isEmpty {
-                    Text("Message litter...")
+                    Text("Message baozi...")
                         .font(BaoziFont.styled(size: 17))
                         .foregroundColor(BaoziTheme.textMuted)
                         .padding(.leading, 24)

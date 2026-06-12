@@ -1,4 +1,4 @@
-/* zh-Hans — auto-generated for litter-fork */
+/* zh-Hans — auto-generated for baozi-fork */
 " %@" = " %@";
 " on your phone" = " 在你的手机上";
 " ›" = " ›";
@@ -117,7 +117,7 @@
 "Logout" = "退出登录";
 "Login with ChatGPT" = "使用 ChatGPT 登录";
 "Match the device setting, or keep Baozi fixed in light or dark mode." = "跟随设备设置，或将 包子 固定为浅色或深色模式。";
-"Message litter..." = "给 包子 发消息...";
+"Message baozi..." = "给 包子 发消息...";
 "Microphone permission is required for voice input. Enable it in Settings." = "语音输入需要麦克风权限。请在“设置”中开启。";
 "Mode" = "模式";
 "Model Usage" = "模型用量";
@@ -244,7 +244,7 @@
 "Wake" = "唤醒";
 "Wake Pet" = "唤醒宠物";
 "Walk-up pairing with proximity + haptics" = "走近即配对，支持近距感应 + 触感反馈";
-"What should we build in litter?" = "我们要在 包子 里做点什么？";
+"What should we build in baozi?" = "我们要在 包子 里做点什么？";
 "When the AI generates an interactive widget with an app_id, it saves here automatically." = "当 AI 生成带 app_id 的交互式小组件时，会自动保存到此处。";
 "Working" = "处理中";
 "Working on your update…" = "正在处理你的更新…";

@@ -107,7 +107,7 @@ struct ConversationComposerEntryRowView: View {
                     )
 
                     if inputText.isEmpty {
-                        Text("Message litter...")
+                        Text("Message baozi...")
                             .font(BaoziFont.styled(size: 17))
                             .foregroundColor(BaoziTheme.textMuted)
                             .padding(.leading, 16)

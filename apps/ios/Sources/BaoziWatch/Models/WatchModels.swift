@@ -195,7 +195,7 @@ enum WatchPreviewFixtures {
             ],
             pendingApprovalId: nil,
             model: "gpt-5-codex",
-            cwd: "/Users/dev/litter",
+            cwd: "/Users/dev/baozi",
             turnCount: 4,
             toolCallCount: 11,
             diffAdditions: 32,

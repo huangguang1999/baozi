@@ -29,7 +29,7 @@ struct NotificationScreen: View {
                         .font(WatchTheme.mono(10, weight: .bold))
                         .foregroundStyle(theme.textOnAccent)
                 }
-                Text("litter")
+                Text("包子")
                     .font(WatchTheme.mono(10))
                     .foregroundStyle(theme.textSecondary)
                 Spacer(minLength: 0)

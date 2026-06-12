@@ -52,7 +52,7 @@ enum BaoziPlatform {
         // Claude Code client, so skip booting it and let the UI come up.
         let ishDisabledForFork = true
         if ishDisabledForFork {
-            NSLog("[ish] local runtime bootstrap intentionally disabled (litter-fork)")
+            NSLog("[ish] local runtime bootstrap intentionally disabled (baozi-fork)")
             return
         }
         guard beginLocalRuntimeBootstrap() else { return }

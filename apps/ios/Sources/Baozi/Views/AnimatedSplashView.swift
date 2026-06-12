@@ -47,7 +47,7 @@ struct AnimatedSplashView: View {
                 BaoziTheme.backgroundGradient.ignoresSafeArea()
             }
 
-            // [litter-fork] Baozi logo replaces the procedural litter kittens.
+            // [baozi-fork] Baozi logo replaces the procedural litter kittens.
             // The scrolling SplashCarouselText below is intentionally kept.
             Image("brand_logo")
                 .resizable()

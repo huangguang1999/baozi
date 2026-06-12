@@ -1023,7 +1023,7 @@ private struct SettingsConnectionAccountSection: View {
                     .listRowBackground(BaoziTheme.surface.opacity(0.6))
             }
 
-            // [litter-fork] ChatGPT OAuth login button removed: replaying a
+            // [baozi-fork] ChatGPT OAuth login button removed: replaying a
             // first-party ChatGPT subscription login in a third-party client risks
             // OpenAI's terms. Use a BYO API key (below) for the local environment.
 

@@ -50,7 +50,7 @@ struct BaoziCircularView: View {
             }
         }
         .padding(2)
-        .widgetURL(entry.taskId.flatMap { URL(string: "litter-watch://task/\($0)") })
+        .widgetURL(entry.taskId.flatMap { URL(string: "baozi-watch://task/\($0)") })
     }
 
     private var primary: String {

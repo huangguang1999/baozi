@@ -59,7 +59,7 @@ struct OpenServerOnWatchIntent: AppIntent {
     var server: WatchServerEntity
 
     func perform() async throws -> some IntentResult {
-        let url = URL(string: "litter-watch://server/\(server.id)")!
+        let url = URL(string: "baozi-watch://server/\(server.id)")!
         await MainActor.run {
             WatchDeepLinkRouter.shared.handle(url)
         }
@@ -77,7 +77,7 @@ struct StartVoiceOnWatchIntent: AppIntent {
     static let openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {
-        let url = URL(string: "litter-watch://voice")!
+        let url = URL(string: "baozi-watch://voice")!
         await MainActor.run {
             WatchDeepLinkRouter.shared.handle(url)
         }

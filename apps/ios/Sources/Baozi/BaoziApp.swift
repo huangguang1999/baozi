@@ -75,7 +75,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         UNUserNotificationCenter.current().delegate = self
         UNUserNotificationCenter.current().setNotificationCategories([
             UNNotificationCategory(
-                identifier: "litter.task.complete",
+                identifier: "baozi.task.complete",
                 actions: [],
                 intentIdentifiers: [],
                 options: [.allowAnnouncement]
@@ -543,7 +543,7 @@ struct ContentView: View {
             appState.selectedAgentRuntimeKind = nil
             appState.reasoningEffort = ""
             appState.showModelSelector = false
-            // [litter-fork] Returning to the home screen (activeThread → nil)
+            // [baozi-fork] Returning to the home screen (activeThread → nil)
             // via a NavigationStack pop leaves the home sessions scroll's
             // UIHostingController-backed rows blank until a manual scroll.
             // Kick a redraw on the now-visible home list.
@@ -990,7 +990,7 @@ private struct HomeNavigationView: View {
         }
         .onChange(of: navigationPath.count) { _, newCount in
             updateHomeDashboardActivity()
-            // [litter-fork] Popping the conversation off this NavigationStack
+            // [baozi-fork] Popping the conversation off this NavigationStack
             // reveals the home sessions scroll, whose orphaned (no parent VC)
             // UIHostingController rows stop rendering off-screen and come back
             // blank — only the background shows — until the user nudges the

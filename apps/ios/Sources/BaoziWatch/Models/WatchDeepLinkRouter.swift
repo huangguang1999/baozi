@@ -1,6 +1,6 @@
 import Foundation
 
-/// Pure deep-link parser for `litter-watch://…` URLs. The watch root view
+/// Pure deep-link parser for `baozi-watch://…` URLs. The watch root view
 /// reads `pendingDeepLink` on appear and acts on it, so AppIntents that
 /// run while the app is suspended can stash a destination and have the
 /// UI apply it once SwiftUI rehydrates.
@@ -31,7 +31,7 @@ final class WatchDeepLinkRouter: ObservableObject {
 
     /// Static so tests can drive parsing without owning a singleton.
     nonisolated static func destination(for url: URL) -> Destination? {
-        guard url.scheme == "litter-watch" else { return nil }
+        guard url.scheme == "baozi-watch" else { return nil }
         switch url.host {
         case "task":
             let id = url.pathComponents.dropFirst().first ?? ""

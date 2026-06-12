@@ -108,7 +108,7 @@ final class NetworkDiscovery {
     @ObservationIgnored private var networkServerLastSeen: [String: Date] = [:]
     @ObservationIgnored private let discoveryStore = DiscoveryBridge()
 
-    private let cacheKey = "litter.discovery.networkServers.v1"
+    private let cacheKey = "baozi.discovery.networkServers.v1"
     private let cacheRetention: TimeInterval = 7 * 24 * 60 * 60
 
     private struct CachedNetworkServer: Codable {

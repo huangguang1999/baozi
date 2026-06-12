@@ -6,23 +6,23 @@ final class WatchDeepLinkRouterTests: XCTestCase {
     // MARK: - URL parsing
 
     func testParsesTaskUrl() {
-        let url = URL(string: "litter-watch://task/macbook:t1")!
+        let url = URL(string: "baozi-watch://task/macbook:t1")!
         XCTAssertEqual(WatchDeepLinkRouter.destination(for: url), .task(id: "macbook:t1"))
     }
 
     func testParsesServerUrl() {
-        let url = URL(string: "litter-watch://server/macbook-pro")!
+        let url = URL(string: "baozi-watch://server/macbook-pro")!
         XCTAssertEqual(WatchDeepLinkRouter.destination(for: url), .server(id: "macbook-pro"))
     }
 
     func testParsesVoiceUrl() {
-        let url = URL(string: "litter-watch://voice")!
+        let url = URL(string: "baozi-watch://voice")!
         XCTAssertEqual(WatchDeepLinkRouter.destination(for: url), .voice)
     }
 
     func testParsesVoiceUrlWithTrailingPath() {
         // Some shortcut runners append a trailing slash; treat as voice.
-        let url = URL(string: "litter-watch://voice/")!
+        let url = URL(string: "baozi-watch://voice/")!
         XCTAssertEqual(WatchDeepLinkRouter.destination(for: url), .voice)
     }
 
@@ -32,17 +32,17 @@ final class WatchDeepLinkRouterTests: XCTestCase {
     }
 
     func testRejectsUnknownHost() {
-        let url = URL(string: "litter-watch://settings")!
+        let url = URL(string: "baozi-watch://settings")!
         XCTAssertNil(WatchDeepLinkRouter.destination(for: url))
     }
 
     func testRejectsTaskWithoutIdentifier() {
-        let url = URL(string: "litter-watch://task/")!
+        let url = URL(string: "baozi-watch://task/")!
         XCTAssertNil(WatchDeepLinkRouter.destination(for: url))
     }
 
     func testRejectsServerWithoutIdentifier() {
-        let url = URL(string: "litter-watch://server/")!
+        let url = URL(string: "baozi-watch://server/")!
         XCTAssertNil(WatchDeepLinkRouter.destination(for: url))
     }
 }

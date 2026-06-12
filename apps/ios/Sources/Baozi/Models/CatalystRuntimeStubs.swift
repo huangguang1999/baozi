@@ -135,8 +135,8 @@ final class AppRuntimeController {
 
 @MainActor
 final class AppLifecycleController {
-    static let notificationServerIdKey = "litter.notification.serverId"
-    static let notificationThreadIdKey = "litter.notification.threadId"
+    static let notificationServerIdKey = "baozi.notification.serverId"
+    static let notificationThreadIdKey = "baozi.notification.threadId"
 
     static func notificationThreadKey(from userInfo: [AnyHashable: Any]) -> ThreadKey? {
         guard let serverId = userInfo[notificationServerIdKey] as? String,
@@ -154,7 +154,7 @@ final class AppLifecycleController {
 final class VoiceRuntimeController {
     static let shared = VoiceRuntimeController()
     static let localServerID = "local"
-    static let persistedLocalVoiceThreadIDKey = "litter.voice.local.thread_id"
+    static let persistedLocalVoiceThreadIDKey = "baozi.voice.local.thread_id"
 
     private(set) var activeVoiceSession: VoiceSessionState?
     var handoffModel: String?

@@ -116,7 +116,7 @@ private struct AccountConnectionView: View {
                 .foregroundColor(BaoziTheme.textMuted)
                 .padding(.horizontal, 20)
 
-            // [litter-fork] ChatGPT OAuth login removed: replaying a first-party
+            // [baozi-fork] ChatGPT OAuth login removed: replaying a first-party
             // ChatGPT/Claude subscription login inside a third-party client risks
             // violating those services' terms. Bring your own API key instead.
             if server.isLocal, allowsLocalEnvApiKey {

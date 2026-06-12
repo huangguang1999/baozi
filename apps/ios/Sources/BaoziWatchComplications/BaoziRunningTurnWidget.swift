@@ -141,7 +141,7 @@ struct BaoziRunningTurnView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
-            .widgetURL(URL(string: "litter-watch://task/\(snapshot.taskId)"))
+            .widgetURL(URL(string: "baozi-watch://task/\(snapshot.taskId)"))
         } else {
             // Nothing running — keep the widget surface minimal so it slips
             // out of the Smart Stack rotation rather than spamming the user.

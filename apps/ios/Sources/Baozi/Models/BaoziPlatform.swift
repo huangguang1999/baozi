@@ -46,7 +46,7 @@ enum BaoziPlatform {
 
     static func bootstrapLocalRuntimeIfNeeded() {
 #if !targetEnvironment(macCatalyst)
-        // [litter-fork] The embedded iSH/Alpine Linux emulator aborts at boot on
+        // [baozi-fork] The embedded iSH/Alpine Linux emulator aborts at boot on
         // this build/signing config ("invalid vdso" -> SIGABRT) and takes the whole
         // app down before the UI renders. The Linux shell agent is not needed for a
         // Claude Code client, so skip booting it and let the UI come up.

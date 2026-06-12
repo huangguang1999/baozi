@@ -9,7 +9,7 @@ import Foundation
 /// new key (`running.turn.v2`) before breaking shape.
 struct RunningTurnSnapshot: Codable, Equatable {
     /// `{serverId}:{threadId}` so the widget can deep-link via
-    /// `litter-watch://task/{taskId}` and match a snapshot row on the watch.
+    /// `baozi-watch://task/{taskId}` and match a snapshot row on the watch.
     let taskId: String
     let title: String
     let serverName: String

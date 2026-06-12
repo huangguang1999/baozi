@@ -16,10 +16,10 @@ final class CloudKVSBridge {
     static let shared = CloudKVSBridge()
 
     /// CBOR envelope written to KVS under this key.
-    private static let envelopeKey = "litter.cloud_sync_envelope_v1"
+    private static let envelopeKey = "baozi.cloud_sync_envelope_v1"
     /// Locally-persisted device identifier for `source_device` tagging in
     /// the envelope. Stable across launches but not synced.
-    private static let deviceIdKey = "litter.cloud_sync_device_id"
+    private static let deviceIdKey = "baozi.cloud_sync_device_id"
     /// Debounce window for outbound writes to avoid storm-writing KVS on
     /// rapid local changes.
     private static let debounceInterval: TimeInterval = 0.5

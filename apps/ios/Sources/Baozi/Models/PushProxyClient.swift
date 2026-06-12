@@ -1,7 +1,7 @@
 import Foundation
 
 actor PushProxyClient {
-    // [litter-fork] Self-hosted push proxy (Cloudflare Worker, baozi-kris99 account).
+    // [baozi-fork] Self-hosted push proxy (Cloudflare Worker, baozi-kris99 account).
     static let baseURL = URL(string: "https://baozi-push-proxy.baozi-kris99.workers.dev")!
 
     struct RegisterBody: Encodable {

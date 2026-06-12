@@ -44,7 +44,7 @@ enum BaoziFeature: String, CaseIterable, Identifiable {
 final class ExperimentalFeatures {
     static let shared = ExperimentalFeatures()
 
-    @ObservationIgnored private let key = "litter.experimentalFeatures"
+    @ObservationIgnored private let key = "baozi.experimentalFeatures"
     private var overrides: [String: Bool]
 
     private init() {

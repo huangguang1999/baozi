@@ -11,8 +11,8 @@ private let appLifecycleSignpostLog = OSLog(
 
 @MainActor
 final class AppLifecycleController {
-    static let notificationServerIdKey = "litter.notification.serverId"
-    static let notificationThreadIdKey = "litter.notification.threadId"
+    static let notificationServerIdKey = "baozi.notification.serverId"
+    static let notificationThreadIdKey = "baozi.notification.threadId"
 
     struct BackgroundTurnReconciliation {
         let remainingKeys: Set<ThreadKey>
@@ -731,7 +731,7 @@ final class AppLifecycleController {
         if !model.isEmpty { bodyParts.append(model) }
         content.body = bodyParts.joined(separator: " - ")
         content.sound = .default
-        content.categoryIdentifier = "litter.task.complete"
+        content.categoryIdentifier = "baozi.task.complete"
         content.userInfo = [
             Self.notificationServerIdKey: threadKey.serverId,
             Self.notificationThreadIdKey: threadKey.threadId

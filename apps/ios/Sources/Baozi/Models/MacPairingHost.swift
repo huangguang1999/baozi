@@ -24,7 +24,7 @@ final class MacPairingHost: NSObject {
     private static let bonjourDomain = ""
     /// Persisted mac-id key; random UUID on first launch, stable across
     /// restarts so reconnecting iPhones can recognize the same Mac.
-    private static let macIdUserDefaultsKey = "litter.mac_pair_id"
+    private static let macIdUserDefaultsKey = "baozi.mac_pair_id"
     /// Unique 4-hex-digit suffix appended to the Bonjour service name on
     /// every launch. mDNSResponder caches the previous registration for
     /// ~2 minutes after a process exits; without a fresh suffix, the next

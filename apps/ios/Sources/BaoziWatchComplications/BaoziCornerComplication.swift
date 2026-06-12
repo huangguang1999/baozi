@@ -35,7 +35,7 @@ struct BaoziCornerView: View {
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(BaoziComplicationTint.ginger)
             }
-            .widgetURL(entry.taskId.flatMap { URL(string: "litter-watch://task/\($0)") })
+            .widgetURL(entry.taskId.flatMap { URL(string: "baozi-watch://task/\($0)") })
     }
 
     private var shortTitle: String {

@@ -368,7 +368,7 @@ final class WatchCompanionBridgeTests: XCTestCase {
 
         XCTAssertFalse(stub.sentContexts.isEmpty, "expected at least one context push after snapshot.request")
         let context = stub.sentContexts.last
-        XCTAssertNotNil(context?["litter.snapshot"] as? Data)
+        XCTAssertNotNil(context?["baozi.snapshot"] as? Data)
     }
 
     func testSnapshotRequestPushesWhenWatchInstallFlagIsStale() async {
@@ -393,7 +393,7 @@ final class WatchCompanionBridgeTests: XCTestCase {
             stub.sentContexts.isEmpty,
             "expected snapshot push even when WCSession has stale isWatchAppInstalled state"
         )
-        XCTAssertNotNil(stub.sentContexts.last?["litter.snapshot"] as? Data)
+        XCTAssertNotNil(stub.sentContexts.last?["baozi.snapshot"] as? Data)
     }
 
     // MARK: - 7. Unknown kind returns nil
@@ -636,7 +636,7 @@ final class WatchCompanionBridgeTests: XCTestCase {
         XCTAssertTrue(request.content.body.contains("fix auth"))
         XCTAssertTrue(request.content.body.contains("git push origin main"))
         // Identifier is stable so a re-issue replaces the existing banner.
-        XCTAssertEqual(request.identifier, "litter.approval.req-42")
+        XCTAssertEqual(request.identifier, "baozi.approval.req-42")
     }
 
     func testApprovalNotificationRequestOmitsThreadIdWhenAbsent() {

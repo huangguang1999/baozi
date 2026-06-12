@@ -58,7 +58,7 @@ struct BaoziRectangularView: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
-        .widgetURL(entry.taskId.flatMap { URL(string: "litter-watch://task/\($0)") })
+        .widgetURL(entry.taskId.flatMap { URL(string: "baozi-watch://task/\($0)") })
     }
 
     private var eyebrow: String {

@@ -6,9 +6,9 @@ import UserNotifications
 /// step with `WatchApprovalNotification` on the iOS target — copied here so
 /// the watch target doesn't need to link the iOS module.
 enum WatchApprovalNotificationConstants {
-    static let categoryIdentifier = "litter.approval"
-    static let allowActionIdentifier = "litter.approval.allow"
-    static let denyActionIdentifier = "litter.approval.deny"
+    static let categoryIdentifier = "baozi.approval"
+    static let allowActionIdentifier = "baozi.approval.allow"
+    static let denyActionIdentifier = "baozi.approval.deny"
     static let requestIdKey = "requestId"
 }
 
@@ -183,7 +183,7 @@ struct BaoziWatchApp: App {
 
         WKNotificationScene(
             controller: BaoziNotificationController.self,
-            category: "litter.task.complete"
+            category: "baozi.task.complete"
         )
 
         WKNotificationScene(

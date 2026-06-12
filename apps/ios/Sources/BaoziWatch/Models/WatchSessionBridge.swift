@@ -231,7 +231,7 @@ final class WatchSessionBridge: NSObject, WCSessionDelegate {
 
     private nonisolated func handle(_ payload: [String: Any]) {
         guard
-            let raw = payload["litter.snapshot"] as? Data,
+            let raw = payload["baozi.snapshot"] as? Data,
             let snapshot = try? JSONDecoder().decode(WatchSnapshotPayload.self, from: raw)
         else { return }
 

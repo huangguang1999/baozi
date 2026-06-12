@@ -7,7 +7,7 @@ struct AnimatedLogo: View {
     @State private var breathing = false
 
     var body: some View {
-        // [litter-fork] Baozi mascot logo (was the procedural litter kittens).
+        // [baozi-fork] Baozi mascot logo (was the procedural litter kittens).
         // Gentle breathing scale keeps it alive as a loading/home logo.
         Image("brand_logo")
             .resizable()

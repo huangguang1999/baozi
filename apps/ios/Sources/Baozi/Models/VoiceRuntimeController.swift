@@ -9,7 +9,7 @@ import UIKit
 final class VoiceRuntimeController: VoiceActions {
     static let shared = VoiceRuntimeController()
     static let localServerID = "local"
-    static let persistedLocalVoiceThreadIDKey = "litter.voice.local.thread_id"
+    static let persistedLocalVoiceThreadIDKey = "baozi.voice.local.thread_id"
 
     private(set) var activeVoiceSession: VoiceSessionState?
     /// Tracks the local mic mute state for the active realtime session.

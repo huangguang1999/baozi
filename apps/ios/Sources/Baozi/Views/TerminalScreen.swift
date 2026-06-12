@@ -21,9 +21,9 @@ struct TerminalScreen: View {
     @State private var ghosttyRenderer = GhosttyTerminalRenderer()
     @State private var nativeRendererHasOutput = false
     @State private var showConfigSheet = false
-    @AppStorage("litter.terminal.fontSize") private var storedFontSize: Double = 13.0
-    @AppStorage("litter.terminal.themeId") private var storedThemeId: String = "litter-dark"
-    @AppStorage("litter.terminal.cursorBlink") private var storedCursorBlink: Bool = true
+    @AppStorage("baozi.terminal.fontSize") private var storedFontSize: Double = 13.0
+    @AppStorage("baozi.terminal.themeId") private var storedThemeId: String = "litter-dark"
+    @AppStorage("baozi.terminal.cursorBlink") private var storedCursorBlink: Bool = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
@@ -658,7 +658,7 @@ private enum TerminalThemeChoice: String, CaseIterable, Identifiable {
 
     var preset: TerminalThemePreset {
         switch self {
-        case .baoziDark: return .baoziDark
+        case .baoziDark: return .litterDark
         case .catppuccinFrappe: return .catppuccinFrappe
         case .catppuccinFrappeLight: return .catppuccinFrappeLight
         case .solarizedDark: return .solarized(dark: true)

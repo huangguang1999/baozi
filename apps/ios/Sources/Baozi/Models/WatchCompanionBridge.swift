@@ -251,7 +251,7 @@ final class WatchCompanionBridge: NSObject {
         content.userInfo = info
 
         return UNNotificationRequest(
-            identifier: "litter.approval.\(approval.id)",
+            identifier: "baozi.approval.\(approval.id)",
             content: content,
             trigger: nil
         )
@@ -579,7 +579,7 @@ final class WatchCompanionBridge: NSObject {
             try? await Task.sleep(nanoseconds: 150_000_000)
             guard !Task.isCancelled else { return }
             do {
-                try transport.updateApplicationContext(["litter.snapshot": data])
+                try transport.updateApplicationContext(["baozi.snapshot": data])
                 self?.lastPushedPayload = payload
             } catch {
                 LLog.error("watch", "push failed: \(error.localizedDescription)")

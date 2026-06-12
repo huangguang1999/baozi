@@ -29,7 +29,7 @@ final class UserMountStore {
     private(set) var statuses: [UUID: MountStatus] = [:]
 
     @ObservationIgnored private var heldUrls: [UUID: URL] = [:]
-    @ObservationIgnored private let storageKey = "litter.userMounts.v1"
+    @ObservationIgnored private let storageKey = "baozi.userMounts.v1"
 
     /// Rootfs top-level directories under `apps/ios/Resources/fs/data/` plus
     /// `apps` (already used by the existing `/mnt/apps` mount). A picked

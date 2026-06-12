@@ -183,7 +183,7 @@ final class GhosttyTerminalRenderer {
     private func applyConfigToRenderer(_ config: TerminalConfig, renderer: TerminalRenderer) {
         if !didSetConfigDir {
             let cachesDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
-            if let dir = cachesDir?.appendingPathComponent("litter/terminal", isDirectory: true) {
+            if let dir = cachesDir?.appendingPathComponent("baozi/terminal", isDirectory: true) {
                 renderer.setConfigDir(path: dir.path)
                 didSetConfigDir = true
             }
@@ -1431,7 +1431,7 @@ final class GhosttyHostView: UIView, UIGestureRecognizerDelegate, UIEditMenuInte
         // menu lands above the highlight instead of the finger.
         let anchor = selectionOverlay.selectionUnionRect()
         let center = anchor?.origin ?? bounds.center
-        let configuration = UIEditMenuConfiguration(identifier: "litter.terminal.edit-menu" as NSString, sourcePoint: center)
+        let configuration = UIEditMenuConfiguration(identifier: "baozi.terminal.edit-menu" as NSString, sourcePoint: center)
         if let rect = anchor {
             // Provide a custom target rect via the delegate callback below.
             editMenu.presentEditMenu(with: configuration)

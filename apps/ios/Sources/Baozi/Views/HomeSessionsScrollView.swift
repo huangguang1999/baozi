@@ -1387,7 +1387,7 @@ final class HomeRowContainer: UIView {
         fadeLink = nil
         tearDownPinchBlurAnimator()
         pinchBlur.effect = nil
-        // [litter-fork] Was `pinchBlurAnimator = makePinchBlurAnimator()`, which
+        // [baozi-fork] Was `pinchBlurAnimator = makePinchBlurAnimator()`, which
         // left a paused animator sitting idle between pinches — iOS finishes it
         // out from under us during a NavigationStack push/pop and snaps the blur
         // to full, leaving a grey band over the row. Keep idle rows blur-free;
@@ -1609,12 +1609,12 @@ final class HomeRowContainer: UIView {
         if scrollHost?.pinchActive == true { return }
         tearDownPinchBlurAnimator()
         pinchBlur.effect = nil
-        // [litter-fork] Yank the effect view out of the hierarchy entirely so a
+        // [baozi-fork] Yank the effect view out of the hierarchy entirely so a
         // stuck/half-snapped material can't keep painting a grey band over the
         // row. `updatePinchBlurAvailability` re-inserts it when the next pinch
         // begins.
         pinchBlur.removeFromSuperview()
-        // [litter-fork] Do NOT rebuild the paused animator here. A freshly
+        // [baozi-fork] Do NOT rebuild the paused animator here. A freshly
         // built UIViewPropertyAnimator for a UIVisualEffectView momentarily
         // renders its full end-state blur until a layout pass scrubs it to
         // fractionComplete=0. A fullScreenCover return (terminal → back) gives

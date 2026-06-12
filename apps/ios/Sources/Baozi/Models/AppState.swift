@@ -12,11 +12,11 @@ final class AppState {
         var rawSandboxPolicy: AppSandboxPolicy?
     }
 
-    private static let approvalPolicyKey = "litter.approvalPolicy"
-    private static let sandboxModeKey = "litter.sandboxMode"
-    private static let preferredModelKey = "litter.preferredModel"
-    private static let preferredAgentRuntimeKindKey = "litter.preferredAgentRuntimeKind"
-    private static let preferredReasoningEffortKey = "litter.preferredReasoningEffort"
+    private static let approvalPolicyKey = "baozi.approvalPolicy"
+    private static let sandboxModeKey = "baozi.sandboxMode"
+    private static let preferredModelKey = "baozi.preferredModel"
+    private static let preferredAgentRuntimeKindKey = "baozi.preferredAgentRuntimeKind"
+    private static let preferredReasoningEffortKey = "baozi.preferredReasoningEffort"
     private static let inheritPermissionValue = "inherit"
     private static let customPermissionValue = "custom"
 

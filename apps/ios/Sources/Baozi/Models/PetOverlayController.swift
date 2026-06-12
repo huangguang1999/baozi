@@ -30,11 +30,11 @@ final class PetOverlayController {
     static let maxPetScale: CGFloat = 5.0
     static let defaultPetScale: CGFloat = 1.0
 
-    private let visibleKey = "litter.petOverlay.visible"
-    private let serverIdKey = "litter.petOverlay.serverId"
-    private let petIdKey = "litter.petOverlay.petId"
-    private let petNameKey = "litter.petOverlay.petName"
-    private let petScaleKey = "litter.petOverlay.petScale"
+    private let visibleKey = "baozi.petOverlay.visible"
+    private let serverIdKey = "baozi.petOverlay.serverId"
+    private let petIdKey = "baozi.petOverlay.petId"
+    private let petNameKey = "baozi.petOverlay.petName"
+    private let petScaleKey = "baozi.petOverlay.petScale"
 
     private(set) var visible = false
     private(set) var selectedPet: CachedPetPackage?

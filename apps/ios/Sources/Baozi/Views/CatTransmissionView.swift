@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 private enum CatTransmissionFrames {
-    // [litter-fork] 喵闻联播 easter egg: 46 frames so the news ticker scrolls.
+    // [baozi-fork] 喵闻联播 easter egg: 46 frames so the news ticker scrolls.
     static let names = (1...46).map { String(format: "cat_transmission_%02d", $0) }
 
     static let frameDurationMs: UInt64 = 82

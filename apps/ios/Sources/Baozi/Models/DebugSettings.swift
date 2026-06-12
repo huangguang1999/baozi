@@ -42,7 +42,7 @@ enum StreamingEffectKind: String, CaseIterable, Identifiable {
 final class DebugSettings {
     static let shared = DebugSettings()
 
-    @ObservationIgnored private let key = "litter.debugSettings"
+    @ObservationIgnored private let key = "baozi.debugSettings"
     private var overrides: [String: Bool]
 
     private init() {

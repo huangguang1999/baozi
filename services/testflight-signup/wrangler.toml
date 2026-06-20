@@ -2,17 +2,21 @@ name = "baozi-testflight-signup"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 workers_dev = true
-routes = [{ pattern = "signup.github.com/huangguang1999/baozi", custom_domain = true }]
+# 官网托管在阿里云 (baozi.kris99app.cn)，本 Worker 暂留 Cloudflare，直接用
+# workers.dev 默认域名: baozi-testflight-signup.<你的账号子域>.workers.dev
+# 官网表单的 __TF_WORKER__ 占位符需替换成上面这个域名。
+# 若日后想用自有子域，把下面这行打开并把 DNS 托管到 Cloudflare：
+# routes = [{ pattern = "signup.kris99app.cn", custom_domain = true }]
 
 [[kv_namespaces]]
 binding = "SIGNUPS"
-id = "d4df48183ec0452b8c5de690c9d7abd1"
+id = "3ba24db735544f69ad69e45969f03082"
 
 [vars]
-# App Store Connect Beta Testers group ID for KittyLitter.
-ASC_BETA_GROUP_ID = "f84224ec-8ec4-43e8-8ae9-933d665f73f1"
-# Allowed CORS origins (comma-separated).
-ALLOWED_ORIGINS = "https://github.com/huangguang1999/baozi,https://www.github.com/huangguang1999/baozi"
+# 包子 app(6778741321) 的「官网公测」外部测试组(2026-06-18 建)。外部组才能接受官网公开邮箱报名。
+ASC_BETA_GROUP_ID = "da3be4bb-da7d-478c-b60f-dbae951d3791"
+# Allowed CORS origins (comma-separated). 官网正式域名。
+ALLOWED_ORIGINS = "https://baozi.kris99app.cn"
 # Per-IP rate limit: max submissions inside the rolling window (seconds).
 RATE_LIMIT_MAX = "5"
 RATE_LIMIT_WINDOW_SECONDS = "600"

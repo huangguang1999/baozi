@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hans">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,15 +7,15 @@
   <meta name="description" content="手机遥控运行在你自己电脑上的 AI 编程智能体（Codex、Claude 等）。端到端加密点对点连接，随时随地查看并指挥 AI 写代码。原生 iOS / Android 客户端。">
   <meta name="theme-color" content="#0C0B0A">
   <link rel="stylesheet" href="/style.css">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.png" type="image/png">
 
   <!-- Open Graph -->
   <meta property="og:title" content="包子 Baozi — 手机遥控你电脑上的 AI 编程">
   <meta property="og:description" content="手机遥控运行在你自己电脑上的 AI 编程智能体（Codex、Claude 等）。端到端加密点对点连接，随时随地查看并指挥 AI 写代码。原生 iOS / Android 客户端。">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://github.com/huangguang1999/baozi/">
+  <meta property="og:url" content="https://baozi.kris99app.cn/">
   <meta property="og:site_name" content="包子">
-  <meta property="og:image" content="https://raw.githubusercontent.com/huangguang1999/baozi/main/services/website/public/app-icon.png">
+  <meta property="og:image" content="https://baozi.kris99app.cn/app-icon.png">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1024">
   <meta property="og:image:height" content="1024">
@@ -25,7 +25,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="包子 Baozi — 手机遥控你电脑上的 AI 编程">
   <meta name="twitter:description" content="手机遥控你电脑上的 AI 编程智能体（Codex、Claude 等）。原生 iOS / Android 客户端。">
-  <meta name="twitter:image" content="https://raw.githubusercontent.com/huangguang1999/baozi/main/services/website/public/app-icon.png">
+  <meta name="twitter:image" content="https://baozi.kris99app.cn/app-icon.png">
   <meta name="twitter:image:alt" content="包子 app icon — 一只趴着的暹罗猫">
 </head>
 <body>
@@ -37,10 +37,10 @@
         <span>包子</span>
       </a>
       <div class="nav-links">
-        <a href="https://github.com/huangguang1999/baozi">github</a>
-        <a href="/privacy">privacy</a>
-        <a href="/terms">terms</a>
-        <a href="/support">support</a>
+        <a href="https://github.com/huangguang1999/baozi">GitHub</a>
+        <a href="/privacy">隐私</a>
+        <a href="/terms">条款</a>
+        <a href="/support">支持</a>
       </div>
     </div>
   </nav>
@@ -103,9 +103,9 @@
       </h1>
 
       <p class="hero-sub fade-in fade-in-d2">
-        a native ios + android client for codex, claude, opencode, pi, and droid.
-        connect from your local network, over ssh, or via alleycat — from anywhere.
-        <span class="hero-oss">open source and always free.</span>
+        原生 iOS + Android 客户端，支持 Codex、Claude、OpenCode、Pi、Droid。
+        局域网、SSH，或扫码点对点配对——随时随地连上你电脑里的 AI。
+        <span class="hero-oss">开源，永久免费。</span>
       </p>
 
       <div class="hero-cta fade-in fade-in-d3">
@@ -116,7 +116,7 @@
         <button type="button" class="btn btn-primary" id="testflight-trigger" aria-haspopup="dialog" aria-controls="testflight-form">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
           TestFlight
-          <span class="btn-badge">beta</span>
+          <span class="btn-badge">公测</span>
         </button>
         <a href="https://github.com/huangguang1999/baozi/releases/latest" class="btn btn-primary">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-1.4l2.458 1.42c.594.344.594 1.202 0 1.546l-2.458 1.42-2.534-2.534 2.534-2.852zM5.864 2.658L16.8 8.99l-2.302 2.302-8.635-8.635z"/></svg>
@@ -129,57 +129,57 @@
       </div>
       <p class="hero-coming-soon fade-in fade-in-d4"></p>
 
-      <form id="testflight-form" class="tf-form" hidden aria-label="Request a TestFlight invite"
-            action="https://github.com/huangguang1999/baozi" method="post" novalidate>
-        <p class="tf-form-lead">Enter your Apple ID email — we'll add you to the TestFlight beta and Apple will send the invite.</p>
+      <form id="testflight-form" class="tf-form" hidden aria-label="申请 TestFlight 公测邀请"
+            action="https://baozi-testflight-signup.baozi-kris99.workers.dev/signup" method="post" novalidate>
+        <p class="tf-form-lead">填写你的 Apple ID 邮箱——我们会把你加入 TestFlight 公测，苹果会给你发送邀请。</p>
         <div class="tf-form-row">
           <label class="tf-form-field">
-            <span class="tf-form-label">Email</span>
+            <span class="tf-form-label">邮箱</span>
             <input type="email" name="email" id="testflight-email" required
                    autocomplete="email" inputmode="email" spellcheck="false"
                    placeholder="you@example.com">
           </label>
-          <button type="submit" class="btn btn-primary tf-form-submit">Request invite</button>
+          <button type="submit" class="btn btn-primary tf-form-submit">申请邀请</button>
         </div>
         <p class="tf-form-status" role="status" aria-live="polite"></p>
-        <p class="tf-form-fineprint">Your email is only used to send the TestFlight invite.</p>
+        <p class="tf-form-fineprint">你的邮箱仅用于发送 TestFlight 邀请。</p>
       </form>
     </div>
   </section>
 
   <section class="features">
     <div class="container">
-      <span class="section-label fade-in">Features</span>
+      <span class="section-label fade-in">功能特性</span>
       <div class="feature-grid">
         <div class="feature-card">
           <span class="feature-icon">🤖</span>
-          <h3>multi-agent</h3>
-          <p>Codex, Claude, OpenCode, Pi, and Droid — all in one app. Switch between them per session, or run several in parallel.</p>
+          <h3>多智能体</h3>
+          <p>Codex、Claude、OpenCode、Pi、Droid——一个 app 全搞定。每个会话随意切换，也能多个并行跑。</p>
         </div>
         <div class="feature-card">
           <span class="feature-icon">📡</span>
-          <h3>auto-discovery</h3>
-          <p>Finds agents running on your local network automatically. No IP addresses, no manual configuration.</p>
+          <h3>自动发现</h3>
+          <p>自动找到局域网里运行的智能体。不用记 IP，不用手动配置。</p>
         </div>
         <div class="feature-card">
           <span class="feature-icon">🐈</span>
-          <h3>alleycat</h3>
-          <p>Peer-to-peer pairing via QR code. Connect through NATs and corporate firewalls — no VPN, no public IP, no port forwarding.</p>
+          <h3>点对点配对</h3>
+          <p>扫码即可点对点配对。穿透 NAT 和公司防火墙——不用 VPN、不用公网 IP、不用端口转发。</p>
         </div>
         <div class="feature-card">
           <span class="feature-icon">🔑</span>
-          <h3>ssh connections</h3>
-          <p>Connect to any remote machine over SSH. 包子 starts your agent on the server for you.</p>
+          <h3>SSH 连接</h3>
+          <p>通过 SSH 连接任意远程机器。包子 会自动在服务器上帮你启动智能体。</p>
         </div>
         <div class="feature-card">
           <span class="feature-icon">🎙</span>
-          <h3>voice input</h3>
-          <p>Real-time voice with your agent — transcription and conversation happen seamlessly while you walk, drive, or think.</p>
+          <h3>语音输入</h3>
+          <p>和智能体实时语音对话——走路、开车、思考时，转写和对话无缝进行。</p>
         </div>
         <div class="feature-card">
           <span class="feature-icon">🎨</span>
-          <h3>70+ themes</h3>
-          <p>Dozens of editor themes — Catppuccin, Dracula, Nord, Gruvbox, Solarized, and more. Dark and light.</p>
+          <h3>70+ 主题</h3>
+          <p>几十款编辑器主题——Catppuccin、Dracula、Nord、Gruvbox、Solarized 等等。深色浅色都有。</p>
         </div>
       </div>
     </div>
@@ -187,23 +187,23 @@
 
   <section class="how-it-works">
     <div class="container">
-      <span class="section-label">How it works</span>
-      <h2>three steps, zero config</h2>
+      <span class="section-label">如何使用</span>
+      <h2>三步上手，零配置</h2>
       <div class="steps">
         <div class="step">
           <div class="step-num">1</div>
-          <h3>find your server</h3>
-          <p>Auto-discovery on your local network, alleycat QR pairing for anywhere else, or paste an SSH address.</p>
+          <h3>找到你的服务器</h3>
+          <p>局域网自动发现，异地用扫码点对点配对，或直接粘贴一个 SSH 地址。</p>
         </div>
         <div class="step">
           <div class="step-num">2</div>
-          <h3>pick an agent</h3>
-          <p>Codex, Claude, OpenCode, Pi, or Droid. 包子 starts the agent on your server for you.</p>
+          <h3>选一个智能体</h3>
+          <p>Codex、Claude、OpenCode、Pi 或 Droid。包子 会自动在你的服务器上启动它。</p>
         </div>
         <div class="step">
           <div class="step-num">3</div>
-          <h3>get to work</h3>
-          <p>Pick up exactly where you left off. Sessions, threads, and context follow you everywhere.</p>
+          <h3>开始干活</h3>
+          <p>从上次中断的地方无缝继续。会话、对话、上下文，走到哪跟到哪。</p>
         </div>
       </div>
     </div>
@@ -218,10 +218,10 @@
         </div>
       </div>
       <div class="footer-links">
-        <a href="https://github.com/huangguang1999/baozi">github</a>
-        <a href="/privacy">privacy</a>
-        <a href="/terms">terms</a>
-        <a href="/support">support</a>
+        <a href="https://github.com/huangguang1999/baozi">GitHub</a>
+        <a href="/privacy">隐私</a>
+        <a href="/terms">条款</a>
+        <a href="/support">支持</a>
       </div>
     </div>
   </footer>
@@ -252,11 +252,11 @@
         e.preventDefault();
         var email = (input.value || '').trim();
         if (!email || email.indexOf('@') < 1) {
-          setStatus('Please enter a valid email address.', 'error');
+          setStatus('请输入有效的邮箱地址。', 'error');
           return;
         }
         submit.disabled = true;
-        setStatus('Sending…', 'pending');
+        setStatus('提交中…', 'pending');
 
         fetch(form.action, {
           method: 'POST',
@@ -268,18 +268,18 @@
           });
         }).then(function (res) {
           if (res.ok) {
-            setStatus('Invite request sent. Check your inbox for a TestFlight invite from Apple.', 'success');
+            setStatus('已提交。请查收苹果发来的 TestFlight 邀请邮件。', 'success');
             input.value = '';
           } else if (res.status === 409) {
-            setStatus('That email is already on the beta. Check your inbox or your TestFlight app.', 'success');
+            setStatus('该邮箱已在公测名单中，请查收邮件或打开 TestFlight。', 'success');
           } else if (res.status === 429) {
-            setStatus('Too many requests. Please try again in a few minutes.', 'error');
+            setStatus('请求过于频繁，请几分钟后再试。', 'error');
           } else {
-            var msg = (res.body && res.body.error) || 'Something went wrong. Please try again.';
+            var msg = (res.body && res.body.error) || '出错了，请重试。';
             setStatus(msg, 'error');
           }
         }).catch(function () {
-          setStatus('Network error. Please try again.', 'error');
+          setStatus('网络错误，请重试。', 'error');
         }).then(function () {
           submit.disabled = false;
         });
